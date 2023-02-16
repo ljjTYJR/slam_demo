@@ -14,15 +14,11 @@ typedef PM::DataPoints DP;
 Odometer::Odometer(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     : nh_(nh),
     nhp_(pnh),
-    odom_(MatrixSE2::Identity()),
-    cur_wheel_odom_(MatrixSE2::Identity()),
-    prev_wheel_odom_(MatrixSE2::Identity()),
-    latest_transform_(MatrixSE2::Identity()),
     sensor_offset_(Eigen::Affine3d::Identity()),
-    odom_initialized_(false),
-    cur_scan_(new pcl::PointCloud<pcl::PointXY>()),
-    prev_scan_(new pcl::PointCloud<pcl::PointXY>())
-{
+    latest_odom_(MatrixSE2::Identity()),
+    set_the_first_pose_(false),
+    latest_scan_(new pcl::PointCloud<pcl::PointXY>()),
+    prev_scan_(new pcl::PointCloud<pcl::PointXY>()) {
     init();
 }
 
@@ -109,7 +105,10 @@ void Odometer::point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_
 }
 
 void Odometer::readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg) {
-  ROS_INFO("readInLaserScan");
+  if (latest_scan_->points.size() != 0) {
+    *prev_scan_ = *latest_scan_;
+  }
+
   timer_ = laser_msg->header.stamp;
   static laser_geometry::LaserProjection laser_projector;
   sensor_msgs::PointCloud2 pc_2;
@@ -120,14 +119,14 @@ void Odometer::readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg
   if (use_darko_cfg_) {
       /* transform the read in point cloud to the coordinate of the robot, represented in the robot */
       pcl::transformPointCloud(*input_cloud, *input_cloud, sensor_offset_);
-      point3d2Point2d(input_cloud, cur_scan_);
+      point3d2Point2d(input_cloud, latest_scan_);
   } else {
       // To do: test for 2d
       ROS_ERROR("Not implemented yet");
   }
-  cur_scan_->width = cur_scan_->points.size();
-  cur_scan_->height = 1;
-  cur_scan_->is_dense = true;
+  latest_scan_->width = latest_scan_->points.size();
+  latest_scan_->height = 1;
+  latest_scan_->is_dense = true;
 
   return;
 }
@@ -148,49 +147,42 @@ void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_ms
   for (int i = 0; i < 2; i++) {
       new_pose(i,2) = t(i);
   }
-  prev_wheel_odom_ = cur_wheel_odom_;
-  cur_wheel_odom_ = new_pose;
+  if (wheel_odom_mem_.size() == 0) {
+    prev_wheel_odom_ = new_pose;
+  } else {
+    ROS_INFO("Read in the first wheel odom");
+    prev_wheel_odom_ = wheel_odom_mem_.back();
+  }
   wheel_odom_mem_.push_back(new_pose);
   return;
 }
 
 void Odometer::updateOdom() {
-  ROS_INFO("updateOdom");
-  // For the first frame, initialize the odometer
-  if (!odom_initialized_) {
-    if (wheel_odom_mem_.size() == 0 || cur_scan_->points.size() == 0) {
-      ROS_ERROR("Initialize the odometer failed, no wheel odom or laser scan received.");
-      return;
-    } else {
-      ROS_INFO("Initialize the odometer");
-      odom_initialized_ = true;
-      odom_ = wheel_odom_mem_.back();
-      prev_wheel_odom_ = cur_wheel_odom_ = odom_;
-      *prev_scan_ = *cur_scan_;
-    }
+  if (!set_the_first_pose_) {
+    ROS_INFO("Set the first pose");
+    // use the first wheel_odom as the first pose
+    latest_odom_ = wheel_odom_mem_.back();
+    set_the_first_pose_ = true;
   } else {
-    // Lidar odom, use the wheel odom as prior guess
+    // use the laser odom
     MatrixSE2 prior_guess = MatrixSE2::Identity();
     if (use_wheel_odom_prior_guess_) {
-      prior_guess = prev_wheel_odom_.inverse() * cur_wheel_odom_;
+      prior_guess = prev_wheel_odom_.inverse() * wheel_odom_mem_.back();
     } else {
       ROS_INFO("Assuming the constant velocity model");
-      prior_guess = latest_transform_;
+      prior_guess = laser_relative_pose_mem_.back();
     }
-    ROS_INFO("register the lidar scan");
-    MatrixSE2 trans_scan_match = icpPointMatch(prev_scan_, cur_scan_, prior_guess);
-    MatrixSE2 cur_pose = odom_mem_.back() * trans_scan_match;
-    odom_ = cur_pose;
-    *prev_scan_ = *cur_scan_;
-    latest_transform_ = trans_scan_match;
-    ROS_INFO("update the lidar odom end");
+      MatrixSE2 trans_scan_match = icpPointMatch(prev_scan_, latest_scan_, prior_guess);
+      latest_odom_ = odom_mem_.back() * trans_scan_match;
+      laser_relative_pose_mem_.push_back(trans_scan_match);
   }
-  odom_mem_.push_back(odom_);
+  odom_mem_.push_back(latest_odom_);
   return;
 }
 
 // Use the libpointmatcher to do the scan matching
 // prev_scan = T * cur_scan
+// Todo: adjust the types or re-write the registration
 MatrixSE2 Odometer::icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev_scan,
                                   const pcl::PointCloud<pcl::PointXY>::Ptr& cur_scan, const MatrixSE2& guess) {
 

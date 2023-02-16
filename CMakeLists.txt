@@ -131,7 +131,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include/
-  src
+  src/
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
@@ -191,9 +191,15 @@ target_link_libraries(
   ${libpointmatcher_LIBRARIES}
 )
 
-add_executable(odom_node odom_node.cpp src/odometer.cpp)
+set(SOURCES
+    src/odometer.cpp
+    src/slam.cpp
+    # src/pose_graph.cpp
+)
+
+add_executable(slam_node slam_node.cpp ${SOURCES})
 target_link_libraries(
-  odom_node
+  slam_node
   ${catkin_LIBRARIES}
   ${CERES_LIBRARIES}
   ${PCL_LIBRARIES}

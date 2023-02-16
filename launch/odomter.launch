@@ -29,7 +29,7 @@
   </group>
 
   <!-- The node of slam  -->
-  <node pkg="slam_demo" name="odometer" type="odom_node" output="screen">
+  <node pkg="slam_demo" name="slam_node" type="slam_node" output="screen">
     <param name="use_darko_cfg_"   value="$(arg use_darko_cfg_)" />
     <param name="use_wheel_odom_prior_guess_" value="$(arg use_wheel_odom_prior_guess_)" />
     <param name="use_wheel_odom_" value="$(arg use_wheel_odom_)" />

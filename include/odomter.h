@@ -3,10 +3,14 @@
 
 // @brief: header file for odometer class
 // @description: The odomter class is used to record the odom information and laser scan
-#include <ros/ros.h>
+#include "types.h"
+
+#include <iostream>
 #include <string>
+
 #include <Eigen/Eigen>
 
+#include <ros/ros.h>
 #include <laser_geometry/laser_geometry.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
@@ -15,7 +19,6 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-#include <iostream>
 #include <sensor_msgs/MultiEchoLaserScan.h>
 #include <sensor_msgs/LaserScan.h>
 #include <pcl/filters/voxel_grid.h>
@@ -30,7 +33,6 @@
 
 
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> LaserOdomSync;
-typedef Eigen::Matrix<double, 3, 3> MatrixSE2;
 
 class Odometer
 {
@@ -95,19 +97,18 @@ private:
     ros::Publisher path_pub_;
     ros::Time timer_;
 
-    // data
-    MatrixSE2 odom_;
-    MatrixSE2 cur_wheel_odom_;
-    MatrixSE2 prev_wheel_odom_;
-    MatrixSE2 latest_transform_;
-    std::vector<MatrixSE2> wheel_odom_mem_;
-    std::vector<MatrixSE2> odom_mem_;
-
-    bool odom_initialized_;
-
-    // point cloud
-    pcl::PointCloud<pcl::PointXY>::Ptr cur_scan_;
+    // The latest data record
+    MatrixSE2 latest_odom_;   //The latest pose of the robot in the map frame;
+    MatrixSE2 prev_wheel_odom_;   //The latest pose of the robot in the map frame;
+    pcl::PointCloud<pcl::PointXY>::Ptr latest_scan_;
     pcl::PointCloud<pcl::PointXY>::Ptr prev_scan_;
+    std::vector<MatrixSE2> odom_mem_;
+    std::vector<MatrixSE2> wheel_odom_mem_;
+    std::vector<MatrixSE2> laser_relative_pose_mem_;
+
+    bool set_the_first_pose_;
+
+
 };
 
 
