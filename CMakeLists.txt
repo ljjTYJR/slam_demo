@@ -21,6 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
   laser_geometry
   eigen_conversions
+  genmsg
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -68,11 +70,10 @@ find_package(libpointmatcher 1.1.0 REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  OptSrv.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -81,11 +82,11 @@ find_package(libpointmatcher 1.1.0 REQUIRED)
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs#   std_msgs
-# )
+# Generate added messages and services with any dependencies listed here
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -180,21 +181,17 @@ list(APPEND G2O_LIBS
   g2o_types_data g2o_types_sim3
 )
 
-add_executable(uti_test  src/uti_test.cpp)
+
+add_executable(client_node code_snippet/client_node.cpp)
 target_link_libraries(
-  uti_test
+  client_node
   ${catkin_LIBRARIES}
-  ${CERES_LIBRARIES}
-  ${PCL_LIBRARIES}
-  ${OpenCV_LIBS}
-  ${G2O_LIBS}
-  ${libpointmatcher_LIBRARIES}
 )
 
 set(SOURCES
     src/odometer.cpp
     src/slam.cpp
-    # src/pose_graph.cpp
+    src/pose_graph.cpp
 )
 
 add_executable(slam_node slam_node.cpp ${SOURCES})

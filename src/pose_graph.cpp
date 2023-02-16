@@ -3,6 +3,7 @@
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include <g2o/solvers/dense/linear_solver_dense.h>
+#include <ros/ros.h>
 
 PoseGraph::PoseGraph() {
     // define the used optimizer
@@ -18,11 +19,13 @@ PoseGraph::PoseGraph() {
     optimizer_->setAlgorithm(algorithm);
 }
 
-g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose) {
+g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose, bool fixed) {
     // create a new node
     g2o::VertexSE2* node = new g2o::VertexSE2();
     node->setId(optimizer_->vertices().size());
     node->setEstimate(pose);
+    if (fixed)
+        node->setFixed(true);
     optimizer_->addVertex(node);
 
     return node;
@@ -41,12 +44,13 @@ g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from, const g2o::Verte
     return edge;
 }
 
-void PoseGraph::optimize() {
+void PoseGraph::optimize(unsigned int num_iterations) {
     optimizer_->initializeOptimization();
     // set the number of iterations
-    optimizer_->optimize(10);
+    optimizer_->optimize(num_iterations);
 }
 
 void PoseGraph::saveGraph(const std::string& file_name) {
+    ROS_INFO("Saving graph to %s", file_name.c_str());
     optimizer_->save(file_name.c_str());
 }

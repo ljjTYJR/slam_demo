@@ -62,6 +62,11 @@ public:
 
     void point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXY>::Ptr& cloud_out);
 
+public:
+    // The exposed data for pose graph
+    std::vector<MatrixSE2> wheel_odom_mem_;
+    std::vector<MatrixSE2> laser_relative_pose_mem_;
+
 private:
     ros::NodeHandle nh_;
     ros::NodeHandle nhp_;
@@ -103,8 +108,6 @@ private:
     pcl::PointCloud<pcl::PointXY>::Ptr latest_scan_;
     pcl::PointCloud<pcl::PointXY>::Ptr prev_scan_;
     std::vector<MatrixSE2> odom_mem_;
-    std::vector<MatrixSE2> wheel_odom_mem_;
-    std::vector<MatrixSE2> laser_relative_pose_mem_;
 
     bool set_the_first_pose_;
 

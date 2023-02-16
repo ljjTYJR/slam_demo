@@ -17,9 +17,10 @@ public:
     /**
      * @brief add a pose node to the current graph, the node represents a pose in the world frame
      * @param the pose of the node
+     * @param whether the node is fixed
      * @return the pointer to the added node
     */
-    g2o::VertexSE2* addSE2Node(const MatrixSE2& pose);
+    g2o::VertexSE2* addSE2Node(const MatrixSE2& pose, bool fixed = false);
 
     /**
      * @brief add a pose edge to the current graph, the edge represents the relative pose between two nodes
@@ -33,8 +34,9 @@ public:
 
     /**
      * @brief optimize the current graph
+     * @param the number of iterations
     */
-    void optimize();
+    void optimize(unsigned int num_iterations = 50);
 
     /**
      * @brief save the current graph to a file
@@ -42,9 +44,12 @@ public:
     */
     void saveGraph(const std::string& file_name);
 
-private:
-    // define the used optimizer
+public:
+    // tood: how to make it private?
     std::shared_ptr<g2o::SparseOptimizer> optimizer_;
+
+private:
+
 };
 
 #endif // __POSE_GRAPH_H

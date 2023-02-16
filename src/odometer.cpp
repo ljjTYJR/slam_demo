@@ -132,7 +132,6 @@ void Odometer::readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg
 }
 
 void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
-  ROS_INFO("readInWheelOdom");
   Eigen::Affine3d T;
   tf::poseMsgToEigen(wheel_odom_msg->pose.pose, T);
   Eigen::Matrix3d r3 = T.rotation();
@@ -148,9 +147,9 @@ void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_ms
       new_pose(i,2) = t(i);
   }
   if (wheel_odom_mem_.size() == 0) {
+    ROS_INFO("Read in the first wheel odom");
     prev_wheel_odom_ = new_pose;
   } else {
-    ROS_INFO("Read in the first wheel odom");
     prev_wheel_odom_ = wheel_odom_mem_.back();
   }
   wheel_odom_mem_.push_back(new_pose);
@@ -169,7 +168,6 @@ void Odometer::updateOdom() {
     if (use_wheel_odom_prior_guess_) {
       prior_guess = prev_wheel_odom_.inverse() * wheel_odom_mem_.back();
     } else {
-      ROS_INFO("Assuming the constant velocity model");
       prior_guess = laser_relative_pose_mem_.back();
     }
       MatrixSE2 trans_scan_match = icpPointMatch(prev_scan_, latest_scan_, prior_guess);
@@ -246,14 +244,15 @@ MatrixSE2 Odometer::icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev
   /* The registration result */
   PM::TransformationParameters T_final = icp(data, ref, T);
   MatrixSE2 T_final_eigen;
-  T_final_eigen << T_final(0,0), T_final(0,1), T_final(0,2),
-                   T_final(1,0), T_final(1,1), T_final(1,2),
-                   0, 0, 1;
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      T_final_eigen(i,j) = T_final(i,j);
+    }
+  }
   return T_final_eigen;
 }
 
 void Odometer::publishPose() {
-  ROS_INFO("publishPose");
   static nav_msgs::Path path;
   geometry_msgs::PoseStamped pose;
   pose.header.stamp = timer_;

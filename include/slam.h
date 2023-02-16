@@ -4,7 +4,8 @@
 #include "types.h"
 #include "odomter.h"
 #include "keyframe.h"
-// #include "pose_graph.h"
+#include "pose_graph.h"
+#include "slam_demo/OptSrv.h"
 
 #include <ros/ros.h>
 #include <Eigen/Dense>
@@ -24,16 +25,23 @@ public:
 
     void registerSubscribers();
 
+    void registerServices();
+
     void mainLoop();
 
 
 private:
 
+    bool optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res);
+
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
 
     // publish the optimized pose
+    ros::Publisher opt_path_pub_;
     ros::Publisher opt_pose_pub_;
+    std::string opt_path_topic_;
+    std::string opt_path_frame_;
     std::string opt_pose_topic_;
     std::string opt_pose_frame_;
 
@@ -46,9 +54,11 @@ private:
     // todo: confuration of parameters
     Eigen::Matrix3d se2_info_laser_mat_;
 
+    ros::ServiceServer opt_server_;
+
     // Todo: change the class object to the pointer
     Odometer odom_;
-    // PoseGraph pose_graph_;
+    PoseGraph pose_graph_;
 
     std::deque<std::shared_ptr<KeyFrame> > key_frames_buffer_;
     std::vector<MatrixSE2> optimized_pose_;
