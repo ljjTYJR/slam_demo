@@ -4,6 +4,7 @@
 // @brief: header file for odometer class
 // @description: The odomter class is used to record the odom information and laser scan
 #include "types.h"
+#include "keyframe.h"
 
 #include <iostream>
 #include <string>
@@ -53,7 +54,7 @@ public:
     void readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg);
     void readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
 
-    void updateOdom();
+    bool updateOdom();
     MatrixSE2 icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev_scan,
                             const pcl::PointCloud<pcl::PointXY>::Ptr& cur_scan, const MatrixSE2& guess);
 
@@ -66,8 +67,13 @@ public:
     // The exposed data for pose graph
     std::vector<MatrixSE2> wheel_odom_mem_;
     std::vector<MatrixSE2> laser_relative_pose_mem_;
+    std::vector<std::shared_ptr<KeyFrame> > key_frames_buffer_;
 
 private:
+
+    void addNewKeyFrame(const MatrixSE2& pose, const MatrixSE2& relative_measure, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud);
+    bool transLargeEnough(const MatrixSE2& pose);
+
     ros::NodeHandle nh_;
     ros::NodeHandle nhp_;
     // The publisher and subscriber
@@ -105,8 +111,10 @@ private:
     // The latest data record
     MatrixSE2 latest_odom_;   //The latest pose of the robot in the map frame;
     MatrixSE2 prev_wheel_odom_;   //The latest pose of the robot in the map frame;
+    MatrixSE2 prev_wheel_key_odom_;
     pcl::PointCloud<pcl::PointXY>::Ptr latest_scan_;
     pcl::PointCloud<pcl::PointXY>::Ptr prev_scan_;
+    // The buffer storing the odometry (now:the key frames)
     std::vector<MatrixSE2> odom_mem_;
 
     bool set_the_first_pose_;

@@ -1,6 +1,8 @@
 #include "odomter.h"
 #include "pointmatcher/PointMatcher.h"
 
+#include <ros/ros.h>
+
 #include <tf/tf.h>
 #include <tf_conversions/tf_eigen.h>
 #include <tf/transform_listener.h>
@@ -19,6 +21,7 @@ Odometer::Odometer(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     set_the_first_pose_(false),
     latest_scan_(new pcl::PointCloud<pcl::PointXY>()),
     prev_scan_(new pcl::PointCloud<pcl::PointXY>()) {
+    ROS_INFO("The odometer is preparing to initialize.");
     init();
 }
 
@@ -26,7 +29,6 @@ void Odometer::init() {
   loadParameters();
   advertisePublishers();
   registerSubscribers();
-  ROS_INFO("The odometer is initialized.");
   return;
 }
 
@@ -55,14 +57,16 @@ void Odometer::loadParameters() {
   float wait_seconds = 1.0;
   while (listening) {
     try {
+        ROS_INFO("trying to get the transform from %s to %s", base_frame_.c_str(), laser_frame_.c_str());
         listener.lookupTransform(base_frame_, laser_frame_, ros::Time(0), transform_stamp);
     } catch (tf::TransformException ex) {
-        /* wait for one seconds */
-        ros::Duration(wait_seconds).sleep();
+        ROS_INFO("waiting to get the transform from %s to %s", base_frame_.c_str(), laser_frame_.c_str());
+        usleep(1000000 * wait_seconds); // wait for 1 second
         continue;
     }
     listening = false;
   }
+  ROS_INFO("exit the loop");
   tf::transformTFToEigen(transform_stamp, sensor_offset_);
   std::cout << "sensor_offset_ = " << sensor_offset_.matrix() << std::endl;
   return;
@@ -89,9 +93,11 @@ void Odometer::registerSubscribers() {
 void Odometer::laserWheelOdomSyncCallback(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
   readInLaserScan(laser_msg);
   readInWheelOdom(wheel_odom_msg);
-  updateOdom();
-  publishPose();
-  publishLaser(laser_msg);
+  // if the new input laser scan is far from the latest key frame enough, add a new key frame;
+  if (updateOdom()) {
+    publishPose();
+    publishLaser(laser_msg);
+  }
   return;
 }
 
@@ -156,26 +162,63 @@ void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_ms
   return;
 }
 
-void Odometer::updateOdom() {
-  if (!set_the_first_pose_) {
-    ROS_INFO("Set the first pose");
-    // use the first wheel_odom as the first pose
-    latest_odom_ = wheel_odom_mem_.back();
-    set_the_first_pose_ = true;
+void Odometer::addNewKeyFrame(const MatrixSE2& pose, const MatrixSE2& relative_measure, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud) {
+  unsigned int key_frame_id = key_frames_buffer_.size();
+  KeyFrame::Ptr new_key_frame(new KeyFrame(key_frame_id, pose, relative_measure, cloud));
+  key_frames_buffer_.push_back(new_key_frame);
+  return;
+}
+
+bool Odometer::transLargeEnough(const MatrixSE2& pose) {
+  static double distance_threshold = 0.25; // 0.5m
+  static double angle_threshold = 0.044; // 2.5 degree
+  double distance = sqrt(pow(pose(0,2), 2) + pow(pose(1,2), 2));
+  double angle = atan2(pose(1,0), pose(0,0));
+  if (distance > distance_threshold || angle > angle_threshold) {
+    return true;
   } else {
-    // use the laser odom
+    return false;
+  }
+}
+
+bool Odometer::updateOdom() {
+  if (!key_frames_buffer_.size()) {
+    ROS_INFO("Add the first key frame");
+    // new a new point cloud
+    pcl::PointCloud<pcl::PointXY>::Ptr key_cloud(new pcl::PointCloud<pcl::PointXY>());
+    *key_cloud = *latest_scan_;
+    // use the latest odom to initialize a new pose
+    latest_odom_ = wheel_odom_mem_.back();
+    prev_wheel_key_odom_ = wheel_odom_mem_.back();
+    // set it as the previous key frame odom
+    odom_mem_.push_back(latest_odom_);
+    MatrixSE2 key_pose = latest_odom_;
+    addNewKeyFrame(key_pose, MatrixSE2::Identity(), key_cloud);
+    return true;
+  } else {
+    // check whether the new scan is far enough from the latest key frame
+    pcl::PointCloud<pcl::PointXY>::Ptr prev_key_scan = key_frames_buffer_.back()->getCloud();
+    // The prior guess still uses the wheel odom guess
     MatrixSE2 prior_guess = MatrixSE2::Identity();
     if (use_wheel_odom_prior_guess_) {
-      prior_guess = prev_wheel_odom_.inverse() * wheel_odom_mem_.back();
-    } else {
-      prior_guess = laser_relative_pose_mem_.back();
+      prior_guess = prev_wheel_key_odom_.inverse() * wheel_odom_mem_.back();
     }
-      MatrixSE2 trans_scan_match = icpPointMatch(prev_scan_, latest_scan_, prior_guess);
-      latest_odom_ = odom_mem_.back() * trans_scan_match;
-      laser_relative_pose_mem_.push_back(trans_scan_match);
+    // TODO: In keyframes configuration, can we use the constant velocity model to predict the pose?
+    MatrixSE2 trans_scan_match = icpPointMatch(prev_key_scan, latest_scan_, prior_guess);
+    // check whether the new scan is far enough from the latest key frame
+    if (transLargeEnough(trans_scan_match)) {
+      ROS_INFO("Add a new key frame");
+      // new a new point cloud
+      pcl::PointCloud<pcl::PointXY>::Ptr key_cloud(new pcl::PointCloud<pcl::PointXY>());
+      *key_cloud = *latest_scan_;
+      MatrixSE2 key_pose = key_frames_buffer_.back()->getPose() * trans_scan_match;
+      addNewKeyFrame(key_pose, trans_scan_match, key_cloud);
+      prev_wheel_key_odom_ = wheel_odom_mem_.back();
+      odom_mem_.push_back(key_pose);
+      return true;
+    }
   }
-  odom_mem_.push_back(latest_odom_);
-  return;
+  return false;
 }
 
 // Use the libpointmatcher to do the scan matching

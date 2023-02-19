@@ -20,23 +20,21 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     using Ptr = std::shared_ptr<KeyFrame>;
 
-    KeyFrame(const unsigned int& id, const ros::Time& stamp, const MatrixSE2& pose, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud)
-    : id_(id), stamp_(stamp), pose_(pose), cloud_(cloud), vertex_(nullptr) {};
+    KeyFrame(const unsigned int& id, const MatrixSE2& pose, const MatrixSE2& relative_measure, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud)
+    : id_(id), pose_(pose), relative_measure_(relative_measure), cloud_(cloud) {};
 
-    ~KeyFrame();
+    ~KeyFrame() {};
 
     unsigned int getId() const { return id_; }
-    ros::Time getStamp() const { return stamp_; }
     MatrixSE2 getPose() const { return pose_; }
+    MatrixSE2 getRelativeMeasure() const { return relative_measure_; }
     pcl::PointCloud<pcl::PointXY>::Ptr getCloud() const { return cloud_; }
-    std::shared_ptr<g2o::VertexSE2> getVertex() const { return vertex_; }
 
 private:
     unsigned int id_;
-    ros::Time stamp_;
     MatrixSE2 pose_;
+    MatrixSE2 relative_measure_; //the relative measure from the previous key frame
     pcl::PointCloud<pcl::PointXY>::Ptr cloud_;
-    std::shared_ptr<g2o::VertexSE2> vertex_;
 };
 
 #endif

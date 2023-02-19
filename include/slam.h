@@ -6,6 +6,7 @@
 #include "keyframe.h"
 #include "pose_graph.h"
 #include "slam_demo/OptSrv.h"
+#include "scan_context.h"
 
 #include <ros/ros.h>
 #include <Eigen/Dense>
@@ -59,8 +60,8 @@ private:
     // Todo: change the class object to the pointer
     Odometer odom_;
     PoseGraph pose_graph_;
+    ScanContextManger scan_context_manager_;
 
-    std::deque<std::shared_ptr<KeyFrame> > key_frames_buffer_;
     std::vector<MatrixSE2> optimized_pose_;
 };
 

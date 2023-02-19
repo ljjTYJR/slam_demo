@@ -27,6 +27,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+# How to use environmental variables in CMake
+list(APPEND CMAKE_MODULE_PATH /home/ros/catkin_ws/src/darko/slam_demo/cmake_modules)
 find_package(Eigen3)
 find_package(Ceres)
 find_package(PCL)

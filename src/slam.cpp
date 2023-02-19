@@ -15,6 +15,7 @@ Slam::Slam(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
       laser_odom_inf_matrix_(Eigen::MatrixXd::Identity(3, 3)),
       key_frame_num_(4),
       loop_inf_matrix_(Eigen::MatrixXd::Identity(3, 3)) {
+    ROS_INFO("Slam::Slam()");
     init();
 }
 
@@ -55,20 +56,20 @@ bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::
     ROS_INFO("Slam::optimize_signal_callback()");
     g2o::VertexSE2* prev_node;
     g2o::VertexSE2* cur_node;
-    // add vertices
-    ROS_INFO("The number of wheel odom vertices: %d", odom_.wheel_odom_mem_.size());
-    for (int i = 0; i < odom_.wheel_odom_mem_.size(); ++i) {
+    // add vertices of the keyframes
+    for (int i = 0; i < odom_.key_frames_buffer_.size(); ++i) {
         // the pose is added as the vertex
         if (i == 0) {
-            cur_node = pose_graph_.addSE2Node(odom_.wheel_odom_mem_[i], true);
+            cur_node = pose_graph_.addSE2Node(odom_.key_frames_buffer_[i]->getPose(), true);
         } else {
-            cur_node = pose_graph_.addSE2Node(odom_.wheel_odom_mem_[i], false);
-            pose_graph_.addSE2Edge(prev_node, cur_node, odom_.laser_relative_pose_mem_[i-1], laser_odom_inf_matrix_);
+            cur_node = pose_graph_.addSE2Node(odom_.key_frames_buffer_[i]->getPose(), false);
+            pose_graph_.addSE2Edge(prev_node, cur_node, odom_.key_frames_buffer_[i]->getRelativeMeasure(), laser_odom_inf_matrix_);
         }
         prev_node = cur_node;
     }
+    // save the optimized pose
     pose_graph_.saveGraph("/home/ros/catkin_ws/src/darko/slam_demo/launch/before_path.g2o");
-    pose_graph_.optimize(20);
+    pose_graph_.optimize(15);
 
     // publish the optimized pose
     ROS_INFO("The number of vertices: %d", pose_graph_.optimizer_->vertices().size());
@@ -105,6 +106,6 @@ void Slam::registerServices() {
 }
 
 void Slam::mainLoop() {
-
+    ROS_INFO("Enter the main loop of slam");
     return;
 }
