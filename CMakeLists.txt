@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   genmsg
   message_generation
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -136,6 +137,7 @@ catkin_package(
 include_directories(
   include/
   src/
+  ${pcl_ros_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}

@@ -51,6 +51,7 @@ private:
     */
     ros::Publisher  opt_path_pub_;
     ros::Publisher  opt_pose_pub_;
+    ros::Publisher  res_point_cloud_pub_;
     message_filters::Subscriber<sensor_msgs::LaserScan> *laser_sub_;
     message_filters::Subscriber<nav_msgs::Odometry>     *wheel_odom_sub_;
     message_filters::Synchronizer<LaserOdomSync>        *sync_wheelOdom_laser_sub_;
@@ -60,6 +61,7 @@ private:
     std::string opt_path_frame_;
     std::string pub_opt_pose_topic_;
     std::string opt_pose_frame_;
+    std::string res_point_cloud_topic_;
 
 
     Eigen::MatrixXd laser_odom_inf_matrix_;

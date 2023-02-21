@@ -19,6 +19,20 @@ PoseGraph::PoseGraph() {
     optimizer_->setAlgorithm(algorithm);
 }
 
+g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose) {
+    // create a new node
+    g2o::VertexSE2* node = new g2o::VertexSE2();
+    node->setId(optimizer_->vertices().size());
+    node->setEstimate(pose);
+    if (optimizer_->vertices().size() == 0) /* set the first frame as the fixed one */
+        node->setFixed(true);
+    else
+        node->setFixed(false);
+    optimizer_->addVertex(node);
+
+    return node;
+}
+
 g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose, bool fixed) {
     // create a new node
     g2o::VertexSE2* node = new g2o::VertexSE2();
@@ -37,6 +51,22 @@ g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from, const g2o::Verte
     g2o::EdgeSE2* edge = new g2o::EdgeSE2();
     edge->vertices()[0] = optimizer_->vertex(from->id());
     edge->vertices()[1] = optimizer_->vertex(to->id());
+    edge->setMeasurement(relative_pose);
+    edge->setInformation(info_matrix);
+    optimizer_->addEdge(edge);
+
+    return edge;
+}
+
+g2o::EdgeSE2* PoseGraph::addSE2Edge(const int prev_id, const int cur_id, const MatrixSE2& relative_pose, const Eigen::Matrix3d& info_matrix) {
+    // create a new edge
+    if (prev_id < 0 || cur_id < 0) {
+        ROS_WARN("The idx of frames is less than 0, prev_id: %d, cur_id: %d", prev_id, cur_id);
+        return nullptr;
+    }
+    g2o::EdgeSE2* edge = new g2o::EdgeSE2();
+    edge->vertices()[0] = optimizer_->vertex(prev_id);
+    edge->vertices()[1] = optimizer_->vertex(cur_id);
     edge->setMeasurement(relative_pose);
     edge->setInformation(info_matrix);
     optimizer_->addEdge(edge);

@@ -202,3 +202,16 @@ std::pair<int, double> ScanContextManger::addNewFrame(const unsigned int id, con
     return res;
 }
 
+bool ScanContextManger::isPossibleLoop(const MatrixSE2& pose1, const MatrixSE2& pose2) {
+    float p1x = pose1(0, 2);
+    float p1y = pose1(1, 2);
+    float p2x = pose2(0, 2);
+    float p2y = pose2(1, 2);
+    float dist = sqrt( (p1x - p2x) * (p1x - p2x) + (p1y - p2y) * (p1y - p2y) );
+    if (dist < kLoopDistThres) {
+        return true;
+    } else {
+        return false;
+    }
+}
+

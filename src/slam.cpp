@@ -2,11 +2,13 @@
 #include "odomter.h"
 #include "keyframe.h"
 #include "slam.h"
+#include "helper.h"
 #include "slam_demo/OptSrv.h"
 
 #include <Eigen/Dense>
 #include <ros/ros.h>
 #include <unistd.h>
+#include <pcl_ros/point_cloud.h>
 
 Slam::Slam(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     : nh_(nh),
@@ -30,7 +32,10 @@ void Slam::init() {
 void Slam::initParameters() {
 
     for (int i = 0; i < laser_odom_inf_matrix_.rows(); ++i) {
-        laser_odom_inf_matrix_(i, i) = 0.1;
+        laser_odom_inf_matrix_(i, i) = 0.2;
+    }
+    for (int i = 0; i < loop_inf_matrix_.rows(); ++i) {
+        loop_inf_matrix_(i, i) = 0.1;
     }
     pnh_.param("sub_wheel_odom_topic_", sub_wheel_odom_topic_, std::string("wheel_odom"));
     pnh_.param("sub_laser_topic_", sub_laser_topic_, std::string("laser_topic"));
@@ -38,12 +43,14 @@ void Slam::initParameters() {
     pnh_.param("opt_path_frame_", opt_path_frame_, std::string("/odom"));
     pnh_.param("pub_opt_pose_topic_", pub_opt_pose_topic_, std::string("/opt_pose"));
     pnh_.param("opt_pose_frame_", opt_pose_frame_, std::string("/odom"));
+    pnh_.param("res_point_cloud_topic_", res_point_cloud_topic_, std::string("/res_point_cloud"));
     return;
 }
 
 void Slam::advertisePublishers() {
     opt_path_pub_ = nh_.advertise<nav_msgs::Path>(pub_opt_path_topic_, 100);
     opt_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(pub_opt_pose_topic_, 100);
+    res_point_cloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZ> >(res_point_cloud_topic_, 10);
     return;
 }
 
@@ -51,19 +58,32 @@ void Slam::advertisePublishers() {
  * recivie the input sensor messgaes and process them
 */
 void Slam::laserWheelOdomSyncCallback(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
+
     std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr> odom_res = odom_.odomDealWithInputMessage(laser_msg, wheel_odom_msg);
-    if (std::get<0>(odom_res) == true) {
-        ROS_INFO("The newest keyframe is %d", std::get<1>(odom_res));
-        std::pair<int, double> sc_res = scan_context_manger_.addNewFrame(std::get<1>(odom_res), std::get<2>(odom_res));
-        if (sc_res.first != -1) /* Find the loop closure */ {
-            ROS_INFO("Find the loop closure, the corresponding keyframe id is %d", sc_res.first);
+    bool is_new_key_frame = std::get<0>(odom_res);
+    unsigned int key_frame_id = std::get<1>(odom_res);
+    if (is_new_key_frame == true) {
+        /* add a new key frame */
+        ROS_INFO("The newest keyframe is %d", key_frame_id);
 
-            int cur_id = std::get<1>(odom_res);
-            int loop_id = sc_res.first;
-            ROS_INFO("cur_id: %d, loop_id: %d", cur_id, loop_id);
+        pose_graph_.addSE2Node(odom_.key_frames_buffer_.back()->getPose());
+        pose_graph_.addSE2Edge(key_frame_id-1, key_frame_id, odom_.key_frames_buffer_.back()->getRelativeMeasure(), laser_odom_inf_matrix_);
 
-            // cur_id is the size of the key_frames_buffer_, the index should be cur_id - 1
-            visualization_.publishLineOfTwoPoses(odom_.key_frames_buffer_[cur_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose(), opt_path_frame_, 10000);
+        // TODO: add the loop closure
+        std::pair<int, double> sc_res = scan_context_manger_.addNewFrame(key_frame_id, std::get<2>(odom_res));
+        unsigned int loop_id = sc_res.first;
+        double rot_angle = sc_res.second;
+        if (loop_id != -1) { /* Find the loop closure by the scene context */
+            ROS_INFO("key_frame_id: %d, loop_id: %d", key_frame_id, loop_id);
+            bool isPossibleLoop = scan_context_manger_.isPossibleLoop(odom_.key_frames_buffer_[key_frame_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose());
+            if (!isPossibleLoop) {
+                return;
+            }
+            visualization_.publishLineOfTwoPoses(odom_.key_frames_buffer_[key_frame_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose(), opt_path_frame_, 10000);
+             /* The `rot_angle` means rotate the `key_frame_id` to the `loop_id`*/
+            MatrixSE2 prior_guess = ang2Mat(rot_angle);
+            MatrixSE2 loop_est = odom_.icpPointMatch(odom_.key_frames_buffer_[loop_id]->getCloud(), odom_.key_frames_buffer_[key_frame_id]->getCloud(), prior_guess);
+            pose_graph_.addSE2Edge(loop_id, key_frame_id, loop_est, loop_inf_matrix_);
         }
     }
     return;
@@ -80,25 +100,13 @@ void Slam::registerSubscribers() {
 
 bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res) {
     ROS_INFO("Slam::optimize_signal_callback()");
-    g2o::VertexSE2* prev_node;
-    g2o::VertexSE2* cur_node;
-    // add vertices of the keyframes
-    for (int i = 0; i < odom_.key_frames_buffer_.size(); ++i) {
-        // the pose is added as the vertex
-        if (i == 0) {
-            cur_node = pose_graph_.addSE2Node(odom_.key_frames_buffer_[i]->getPose(), true);
-        } else {
-            cur_node = pose_graph_.addSE2Node(odom_.key_frames_buffer_[i]->getPose(), false);
-            pose_graph_.addSE2Edge(prev_node, cur_node, odom_.key_frames_buffer_[i]->getRelativeMeasure(), laser_odom_inf_matrix_);
-        }
-        prev_node = cur_node;
-    }
     // save the optimized pose
     pose_graph_.saveGraph("/home/ros/catkin_ws/src/darko/slam_demo/launch/before_path.g2o");
     pose_graph_.optimize(15);
 
     // publish the optimized pose
     ROS_INFO("The number of vertices: %d", pose_graph_.optimizer_->vertices().size());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr merged(new pcl::PointCloud<pcl::PointXYZ>());
     nav_msgs::Path path;
     for (unsigned int i = 0; i < pose_graph_.optimizer_->vertices().size(); ++i) {
         // get the estimated pose of each vertex
@@ -118,10 +126,26 @@ bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::
         pose_msg.pose.orientation = tf::createQuaternionMsgFromYaw(orientation);
         // need to wait some time?
         path.poses.push_back(pose_msg);
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr tmp_3d(new pcl::PointCloud<pcl::PointXYZ>()); // Create map
+        pcl::PointCloud<pcl::PointXYZ>::Ptr key_frame_3d(new pcl::PointCloud<pcl::PointXYZ>());
+        pcl::copyPointCloud(*odom_.key_frames_buffer_[i]->getCloud(), *key_frame_3d);
+        // pose_msg to matrix
+        Eigen::Matrix4f pose_mat;
+        pose_mat << cos(orientation), -sin(orientation), 0, position.x(),
+                    sin(orientation), cos(orientation), 0, position.y(),
+                    0, 0, 1, 0,
+                    0, 0, 0, 1;
+        pcl::transformPointCloud(*key_frame_3d, *tmp_3d, pose_mat);
+
+        *merged += *tmp_3d;
     }
     path.header.stamp = ros::Time::now();
     path.header.frame_id = opt_path_frame_;
     opt_path_pub_.publish(path);
+    merged->header.frame_id = opt_path_frame_;
+    pcl_conversions::toPCL(ros::Time::now(), merged->header.stamp);
+    res_point_cloud_pub_.publish(*merged);
     ROS_INFO("Publish the optimized path");
     return true;
 }

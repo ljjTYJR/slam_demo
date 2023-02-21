@@ -8,6 +8,7 @@
 
 #include "nanoflann.hpp"
 #include "KDTreeVectorOfVectorsAdaptor.h"
+#include "types.h"
 
 /**
  * The header file for scan context class
@@ -35,7 +36,8 @@ public:
     // The user API
         std::pair<int, double> addNewFrame(const unsigned int id,
                                            const pcl::PointCloud<pcl::PointXY>::Ptr cloud);
-        // Return the id of the key frame and the rotation angle
+        /* TODO: add the the `addNewFrame` function? */
+        bool isPossibleLoop(const MatrixSE2& pose1, const MatrixSE2& pose2);
 
 private:
 
@@ -56,6 +58,7 @@ private:
         const unsigned int kNumSector = 60;
         const unsigned int kSkipLaestFrames = 20;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
         const unsigned int kNumRingKeyQuery = 10;        // The number of key frames(ring key) to query
+        const double kLoopDistThres = 0.5;                // The maximum distance between two possbile poses
         const double kMaxRadius = 10.0;             // meter
         const double kSectorResolution = 360.0 / (double)(kNumSector);
         const double kRingResolution = kMaxRadius / (double)(kNumRings);

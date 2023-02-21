@@ -8,32 +8,22 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include "types.h"
+
 typedef pcl::PointXY PointType;
 typedef pcl::PointXYZ PointType3;
 
 using namespace std;
-
-/**
- * Convert a 2d rotation matrix to angle
- */
-double rotToAngle(Eigen::Matrix2d r) {
-    double cos_theta = r(0, 0);
-    double sin_theta = r(1, 0);
-    return atan2(sin_theta, cos_theta);
-}
-
-/**
- * Convert a 2d rotation matrix to angle(deg)
- */
-double rotToAngleDeg(Eigen::Matrix2d r) {
-    double cos_theta = r(0, 0);
-    double sin_theta = r(1, 0);
-    double rad = atan2(sin_theta, cos_theta);
-    double deg = (rad / M_PI) * 180;
-    if (deg < 0) {
-        deg += 360;
-    }
-    return deg;
+MatrixSE2 ang2Mat(double ang) {
+    MatrixSE2 mat;
+    mat(0, 0) = cos(ang);
+    mat(0, 1) = -sin(ang);
+    mat(1, 0) = sin(ang);
+    mat(1, 1) = cos(ang);
+    mat(0, 2) = 0;
+    mat(1, 2) = 0;
+    mat(2, 0) = 0;
+    return mat;
 }
 
 /* convert 3d point cloud to 2d point cloud */
