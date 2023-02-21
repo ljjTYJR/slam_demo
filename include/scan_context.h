@@ -33,16 +33,17 @@ public:
     ~ScanContextManger();
 
     // The user API
-        std::pair<int, double> addNewFrame(unsigned int id, pcl::PointCloud<pcl::PointXY>::Ptr cloud);
+        std::pair<int, double> addNewFrame(const unsigned int id,
+                                           const pcl::PointCloud<pcl::PointXY>::Ptr cloud);
         // Return the id of the key frame and the rotation angle
 
 private:
 
     // The used internal functions
         // The scan context generation
-        Eigen::MatrixXf generateScanContext(pcl::PointCloud<pcl::PointXY>::Ptr cloud);
+        Eigen::MatrixXf generateScanContext(const pcl::PointCloud<pcl::PointXY>::Ptr cloud);
         // The ring key generation
-        Eigen::MatrixXf generateRingKey(Eigen::MatrixXf scan_context);
+        std::vector<float> generateRingKey(const Eigen::MatrixXf& scan_context);
         // measure the similarity between two scan contexts
         std::pair<double, int> scanContextAlignment(Eigen::MatrixXf& q_scan_context, Eigen::MatrixXf& ref_scan_context);
         Eigen::MatrixXf scanContextMatShift(Eigen::MatrixXf& scan_context, int shift);

@@ -7,10 +7,13 @@
 #include "pose_graph.h"
 #include "slam_demo/OptSrv.h"
 #include "scan_context.h"
+#include "visualization.h"
 
 #include <ros/ros.h>
 #include <Eigen/Dense>
 #include <string>
+
+using LaserOdomSync = message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry>;
 
 class Slam {
 
@@ -32,22 +35,32 @@ public:
 
 
 private:
-
-    bool optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res);
-
-    ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
+    ros::NodeHandle nh_;
 
-    // publish the optimized pose
-    ros::Publisher opt_path_pub_;
-    ros::Publisher opt_pose_pub_;
-    std::string opt_path_topic_;
+    /**
+     * The callback functions to deal with the input signal;
+     * Get the offline optimization signal;
+     * Get the laser scan and wheel odometry message;
+     */
+    bool optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res);
+    void laserWheelOdomSyncCallback(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
+
+    /**
+     * The parameters of the topics mangers
+    */
+    ros::Publisher  opt_path_pub_;
+    ros::Publisher  opt_pose_pub_;
+    message_filters::Subscriber<sensor_msgs::LaserScan> *laser_sub_;
+    message_filters::Subscriber<nav_msgs::Odometry>     *wheel_odom_sub_;
+    message_filters::Synchronizer<LaserOdomSync>        *sync_wheelOdom_laser_sub_;
+    std::string sub_wheel_odom_topic_;
+    std::string sub_laser_topic_;
+    std::string pub_opt_path_topic_;
     std::string opt_path_frame_;
-    std::string opt_pose_topic_;
+    std::string pub_opt_pose_topic_;
     std::string opt_pose_frame_;
 
-    // todo: better way to maintain the keyframes
-    unsigned int key_frame_num_;
 
     Eigen::MatrixXd laser_odom_inf_matrix_;
     Eigen::MatrixXd loop_inf_matrix_;
@@ -60,7 +73,8 @@ private:
     // Todo: change the class object to the pointer
     Odometer odom_;
     PoseGraph pose_graph_;
-    ScanContextManger scan_context_manager_;
+    ScanContextManger scan_context_manger_;
+    Visualization visualization_;
 
     std::vector<MatrixSE2> optimized_pose_;
 };

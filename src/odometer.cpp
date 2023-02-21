@@ -28,7 +28,6 @@ Odometer::Odometer(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
 void Odometer::init() {
   loadParameters();
   advertisePublishers();
-  registerSubscribers();
   return;
 }
 
@@ -38,11 +37,9 @@ void Odometer::loadParameters() {
   nhp_.param("odom_frame_", odom_frame_, std::string("odom_frame"));
   nhp_.param("base_frame_", base_frame_, std::string("base_frame"));
   // topics
-  nhp_.param("wheel_odom_topic_", wheel_odom_topic_, std::string("wheel_odom"));
-  nhp_.param("laser_topic_", laser_topic_, std::string("laser_topic"));
-  nhp_.param("pose_topic_pub_", pose_topic_pub_, std::string("pose"));
-  nhp_.param("laser_topic_pub_", laser_topic_pub_, std::string("laser"));
-  nhp_.param("path_topic_pub_", path_topic_pub_, std::string("path"));
+  nhp_.param("pub_pose_topic_", pub_pose_topic_, std::string("pose"));
+  nhp_.param("pub_laser_topic_", pub_laser_topic_, std::string("laser"));
+  nhp_.param("pub_path_topic_", pub_path_topic_, std::string("path"));
   // flags
   nhp_.param("use_wheel_odom_", use_wheel_odom_, true);
   nhp_.param("use_laser_", use_laser_, true);
@@ -66,39 +63,35 @@ void Odometer::loadParameters() {
     }
     listening = false;
   }
-  ROS_INFO("exit the loop");
   tf::transformTFToEigen(transform_stamp, sensor_offset_);
   std::cout << "sensor_offset_ = " << sensor_offset_.matrix() << std::endl;
   return;
 }
 
 void Odometer::advertisePublishers() {
-  odom_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(pose_topic_pub_, 100);
-  laser_pub_ = nh_.advertise<sensor_msgs::LaserScan>(laser_topic_pub_, 100);
-  path_pub_ = nh_.advertise<nav_msgs::Path>(path_topic_pub_, 100);
-  ROS_INFO("Advertised to %s, %s, %s", pose_topic_pub_.c_str(), laser_topic_pub_.c_str(), path_topic_pub_.c_str());
+  odom_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(pub_pose_topic_, 100);
+  laser_pub_ = nh_.advertise<sensor_msgs::LaserScan>(pub_laser_topic_, 100);
+  path_pub_ = nh_.advertise<nav_msgs::Path>(pub_path_topic_, 100);
+  ROS_INFO("Advertised to %s, %s, %s", pub_pose_topic_.c_str(), pub_laser_topic_.c_str(), pub_path_topic_.c_str());
   return;
 }
 
-void Odometer::registerSubscribers() {
-  wheel_odom_sub_ = new message_filters::Subscriber<nav_msgs::Odometry>(nh_, wheel_odom_topic_, 100);
-  laser_sub_ = new message_filters::Subscriber<sensor_msgs::LaserScan>(nh_, laser_topic_, 100);
-  sync_wheelOdom_laser_sub_ = new message_filters::Synchronizer<LaserOdomSync>(LaserOdomSync(100), *laser_sub_, *wheel_odom_sub_);
-  sync_wheelOdom_laser_sub_->registerCallback(boost::bind(&Odometer::laserWheelOdomSyncCallback, this, _1, _2));
-  // TODO: more generic
-  ROS_INFO("Subscribed to %s and %s", wheel_odom_topic_.c_str(), laser_topic_.c_str());
-  return;
-}
+std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr>
+Odometer::odomDealWithInputMessage(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
+  bool update = false;
+  unsigned int key_frame_cnt = 0;
 
-void Odometer::laserWheelOdomSyncCallback(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
   readInLaserScan(laser_msg);
   readInWheelOdom(wheel_odom_msg);
-  // if the new input laser scan is far from the latest key frame enough, add a new key frame;
-  if (updateOdom()) {
+
+  update = updateOdom();
+  if (update) {
     publishPose();
     publishLaser(laser_msg);
+    key_frame_cnt = key_frames_buffer_.size();
   }
-  return;
+  // Here, minus 1 because the index should start from 0
+  return std::make_tuple(update, key_frame_cnt - 1, latest_scan_);
 }
 
 void Odometer::point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_cloud, pcl::PointCloud<pcl::PointXY>::Ptr& output_cloud) {
@@ -170,11 +163,9 @@ void Odometer::addNewKeyFrame(const MatrixSE2& pose, const MatrixSE2& relative_m
 }
 
 bool Odometer::transLargeEnough(const MatrixSE2& pose) {
-  static double distance_threshold = 0.25; // 0.5m
-  static double angle_threshold = 0.044; // 2.5 degree
   double distance = sqrt(pow(pose(0,2), 2) + pow(pose(1,2), 2));
   double angle = atan2(pose(1,0), pose(0,0));
-  if (distance > distance_threshold || angle > angle_threshold) {
+  if (distance > kMinDist_ || abs(angle) > kMinRot_) {  /* atan2 is in [-pi,pi]*/
     return true;
   } else {
     return false;
@@ -207,7 +198,6 @@ bool Odometer::updateOdom() {
     MatrixSE2 trans_scan_match = icpPointMatch(prev_key_scan, latest_scan_, prior_guess);
     // check whether the new scan is far enough from the latest key frame
     if (transLargeEnough(trans_scan_match)) {
-      ROS_INFO("Add a new key frame");
       // new a new point cloud
       pcl::PointCloud<pcl::PointXY>::Ptr key_cloud(new pcl::PointCloud<pcl::PointXY>());
       *key_cloud = *latest_scan_;

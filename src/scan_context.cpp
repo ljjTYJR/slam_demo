@@ -4,6 +4,7 @@
 #include <limits>
 #include <chrono>
 #include <cmath>
+#include <memory>
 
 /**
  * Convert degrees to radians, the input angle is in range [0, 360], the output angle is in range [0, 2π]
@@ -54,10 +55,10 @@ Eigen::MatrixXf ScanContextManger::generateScanContext(const pcl::PointCloud<pcl
     return scan_context;
 }
 
-Eigen::MatrixXf ScanContextManger::generateRingKey(const Eigen::MatrixXf& scan_context) {
+std::vector<float> ScanContextManger::generateRingKey(const Eigen::MatrixXf& scan_context) {
     // ring key is used for quick query, the requirement is that the ring key should be rotation invariant
     std::vector<float> ring_key = std::vector<float>(kNumRings, 0);
-    for (unsigned int = 0; i < kNumRings; i++) {
+    for (unsigned int i = 0; i < kNumRings; i++) {
         ring_key[i] = scan_context.row(i).sum();
     }
     return ring_key;
@@ -90,15 +91,15 @@ double ScanContextManger::distDirectSC(Eigen::MatrixXf& q_scan_context, Eigen::M
     */
     int num_eff_cols = 0; // i.e., to exclude all-nonzero sector
     double sum_sector_similarity = 0;
-    for ( int col_idx = 0; col_idx < _sc1.cols(); col_idx++ )
+    for ( int col_idx = 0; col_idx < q_scan_context.cols(); col_idx++ )
     {
-        VectorXd col_sc1 = _sc1.col(col_idx);
-        VectorXd col_sc2 = _sc2.col(col_idx);
+        Eigen::VectorXf col_q_scan_context = q_scan_context.col(col_idx);
+        Eigen::VectorXf col_ref_scan_context = ref_scan_context.col(col_idx);
 
-        if( col_sc1.norm() == 0 | col_sc2.norm() == 0 )
+        if( col_q_scan_context.norm() == 0 | col_ref_scan_context.norm() == 0 )
             continue; // don't count this sector pair.
 
-        double sector_similarity = col_sc1.dot(col_sc2) / (col_sc1.norm() * col_sc2.norm());
+        double sector_similarity = col_q_scan_context.dot(col_ref_scan_context) / (col_q_scan_context.norm() * col_ref_scan_context.norm());
 
         sum_sector_similarity = sum_sector_similarity + sector_similarity;
         num_eff_cols = num_eff_cols + 1;
@@ -136,13 +137,13 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
 
     if (point_cloud_dsc_buffer_.size() < kSkipLaestFrames) {
         ROS_INFO("The buffer is not large enough to detect loop closure, the buffer size is %d", point_cloud_dsc_buffer_.size());
-        goto MAKE_RES;
+        return std::make_pair(loop_id, loop_angle);
     }
     // every `kSkipLaestFrames` frames, reconstruct the ring key tree
     if (point_cloud_dsc_buffer_.size() % kSkipLaestFrames == 0) {
         ROS_INFO("Reconstruct the ring key tree.");
         tmp_ring_key_search_base_.clear();
-        tmp_ring_key_search_base_.assign(ring_key_buffer_.begin(), ring_key_buffer_.end() - kSkipLaestFrames);  //avoid to search the latest frames
+        tmp_ring_key_search_base_.assign(ring_key_buffer_.begin(), ring_key_buffer_.end() - kSkipLaestFrames + 1);  //avoid to search the latest frames, in addition, plus 1
 
         ring_key_kd_tree_.reset();
         ring_key_kd_tree_ = std::make_unique<RingKeyKDTree>(kNumRings /* dim */, tmp_ring_key_search_base_, 10 /* max leaf */ );
@@ -174,19 +175,16 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start); // in ms
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // in ms
     ROS_INFO("The time of searching the scan context is %d ms", duration_ms.count());
 
-    if (min_dist < kLoopClosureDistThres) {
+    if (min_dist < kSC_DIST_THRES) {
         loop_id = point_cloud_dsc_buffer_[nn_idx].id;
+        loop_angle = deg2rad(nn_shift * kSectorResolution); // 0-2pi
         ROS_INFO("Loop closure detected, the loop id is %d, the shift is %d", loop_id, nn_shift);
     } else {
-        ROS_INFO("No loop closure detected, the min dist is %f", min_dist);
-        goto MAKE_RES;
+        ROS_DEBUG("No loop closure detected, the min dist is %f", min_dist);
     }
-
-    loop_angle = deg2rad(nn_shift * kSectorResolution); // 0-2pi
-MAKE_RES:
     return std::make_pair(loop_id, loop_angle);
 }
 
@@ -201,9 +199,6 @@ std::pair<int, double> ScanContextManger::addNewFrame(const unsigned int id, con
 
     // Use the latest added frame to detect the loop closure
     std::pair<int, double> res = detectLoopClosure(pt_dsc);
-    if (res.first != -1) {
-        ROS_INFO("Loop closure detected, the loop id is %d, the angle is %f", res.first, res.second);
-    }
     return res;
 }
 

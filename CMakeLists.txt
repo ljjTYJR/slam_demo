@@ -5,7 +5,8 @@ project(slam_demo)
 # add_compile_options(-std=c++11)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++14")
+# set(CMAKE_CXX_FLAGS "-std=c++14")
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 ## Find catkin macros and libraries
@@ -190,10 +191,18 @@ target_link_libraries(
   ${catkin_LIBRARIES}
 )
 
+add_executable(marker_node code_snippet/marker.cpp)
+target_link_libraries(
+  marker_node
+  ${catkin_LIBRARIES}
+)
+
 set(SOURCES
     src/odometer.cpp
     src/slam.cpp
     src/pose_graph.cpp
+    src/scan_context.cpp
+    src/visualization.cpp
 )
 
 add_executable(slam_node slam_node.cpp ${SOURCES})

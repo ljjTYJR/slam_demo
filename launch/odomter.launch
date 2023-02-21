@@ -5,14 +5,14 @@
     <arg name="base_frame_"   value="/base" />
     <arg name="laser_frame_" value="/laser" />
     <arg name="odom_frame_" value="/odom" />
-    <arg name="pose_topic_pub_" value="pose" />
-    <arg name="laser_topic_pub_" value="laser" />
-    <arg name="path_topic_pub_" value="path" />
+    <arg name="pub_pose_topic_" value="pose" />
+    <arg name="pub_laser_topic_" value="laser" />
+    <arg name="pub_path_topic_" value="path" />
 
     <!-- Topics Arguments -->
     <!-- Change to the topic names in the rosbag or others -->
-    <arg name="laser_topic_"  value="/robot/front_laser/scan" />
-    <arg name="wheel_odom_topic_"  value="/robot/throttle/odom" />
+    <arg name="sub_laser_topic_"  value="/robot/front_laser/scan" />
+    <arg name="sub_wheel_odom_topic_"  value="/robot/throttle/odom" />
     <!-- Other Predefined parameters -->
     <arg name="use_wheel_odom_" value="true" />
     <arg name="use_laser_" value="true" />
@@ -38,8 +38,8 @@
     <param name="base_frame_"   value="$(arg base_frame_)" />
     <param name="laser_frame_" value="$(arg laser_frame_)" />
     <param name="odom_frame_" value="$(arg odom_frame_)" />
-    <param name="laser_topic_" value="$(arg laser_topic_)"/>
-    <param name="wheel_odom_topic_" value="$(arg wheel_odom_topic_)"/>
+    <param name="sub_laser_topic_" value="$(arg sub_laser_topic_)"/>
+    <param name="sub_wheel_odom_topic_" value="$(arg sub_wheel_odom_topic_)"/>
   </node>
 
   <node pkg="rosbag" type="play" name="rosbag"

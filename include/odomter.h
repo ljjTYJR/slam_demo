@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <string>
+#include <tuple>
 
 #include <Eigen/Eigen>
 
@@ -32,9 +33,6 @@
 #include <pcl/point_types.h>
 #include <opencv2/opencv.hpp>
 
-
-typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> LaserOdomSync;
-
 class Odometer
 {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -42,29 +40,27 @@ public:
     Odometer(const ros::NodeHandle& nh, const ros::NodeHandle& pnh);
     ~Odometer();
 
+    /* the odometer, to deal with the input message; the input can be wheel_odom or laser_msg or both */
+    std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr> odomDealWithInputMessage(
+        const sensor_msgs::LaserScan::ConstPtr& laser_msg,
+        const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
+    void odomDealWithInputMessage(const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
+    void odomDealWithInputMessage(const sensor_msgs::LaserScan::ConstPtr& laser_msg);
+
     void init();
-
     void loadParameters();
-
     void advertisePublishers();
-
     void registerSubscribers();
-
-    void laserWheelOdomSyncCallback(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
     void readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg);
     void readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_msg);
-
     bool updateOdom();
     MatrixSE2 icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev_scan,
                             const pcl::PointCloud<pcl::PointXY>::Ptr& cur_scan, const MatrixSE2& guess);
-
     void publishPose();
     void publishLaser(const sensor_msgs::LaserScan::ConstPtr& laser_msg);
-
     void point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXY>::Ptr& cloud_out);
 
 public:
-    // The exposed data for pose graph
     std::vector<MatrixSE2> wheel_odom_mem_;
     std::vector<MatrixSE2> laser_relative_pose_mem_;
     std::vector<std::shared_ptr<KeyFrame> > key_frames_buffer_;
@@ -76,20 +72,18 @@ private:
 
     ros::NodeHandle nh_;
     ros::NodeHandle nhp_;
-    // The publisher and subscriber
 
-    // Parameters
+    const double kMinDist_ = 0.30; //0.20m
+    const double kMinRot_ = 3.0 * M_PI / 180.0; //2.5 degree
+
     // frames
     std::string laser_frame_;
     std::string odom_frame_;
     std::string base_frame_;
-    // topics:subscribers
-    std::string wheel_odom_topic_;
-    std::string laser_topic_;
     // topics:publish
-    std::string pose_topic_pub_;
-    std::string laser_topic_pub_;
-    std::string path_topic_pub_;
+    std::string pub_pose_topic_;
+    std::string pub_laser_topic_;
+    std::string pub_path_topic_;
     // flags
     bool use_wheel_odom_;
     bool use_laser_;
@@ -98,11 +92,6 @@ private:
     Eigen::Affine3d sensor_offset_;
 
     // advertisers and subscribers
-    // ros::Subscriber wheel_odom_sub_;
-    // ros::Subscriber laser_sub_;
-    message_filters::Subscriber<sensor_msgs::LaserScan> *laser_sub_;
-    message_filters::Subscriber<nav_msgs::Odometry>     *wheel_odom_sub_;
-    message_filters::Synchronizer<LaserOdomSync>        *sync_wheelOdom_laser_sub_;
     ros::Publisher odom_pub_;
     ros::Publisher laser_pub_;
     ros::Publisher path_pub_;
@@ -114,9 +103,7 @@ private:
     MatrixSE2 prev_wheel_key_odom_;
     pcl::PointCloud<pcl::PointXY>::Ptr latest_scan_;
     pcl::PointCloud<pcl::PointXY>::Ptr prev_scan_;
-    // The buffer storing the odometry (now:the key frames)
     std::vector<MatrixSE2> odom_mem_;
-
     bool set_the_first_pose_;
 
 

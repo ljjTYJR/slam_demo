@@ -7,6 +7,8 @@ Panels:
         - /Global Options1
         - /OptPath1
         - /OptPose1
+        - /Marker1
+        - /Marker1/Status1
       Splitter Ratio: 0.5
     Tree Height: 725
   - Class: rviz/Selection
@@ -209,6 +211,14 @@ Visualization Manager:
       Shape: Arrow
       Topic: /opt_pose
       Unreliable: false
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_line
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
