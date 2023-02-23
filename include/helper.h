@@ -1,5 +1,4 @@
-#ifndef __HELPER_H__
-#define __HELPER_H__
+#pragma once
 
 #include <Eigen/Eigen>
 #include <math.h>
@@ -8,12 +7,13 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
 #include "types.h"
 
 typedef pcl::PointXY PointType;
 typedef pcl::PointXYZ PointType3;
 
-using namespace std;
 MatrixSE2 ang2Mat(double ang) {
     MatrixSE2 mat;
     mat(0, 0) = cos(ang);
@@ -36,5 +36,4 @@ void point3d2point2d(const pcl::PointCloud<PointType3> &cloud_in, pcl::PointClou
     return;
 }
 
-
-#endif
+/* convert `geometry_msgs::msg::TransformStamped` to an Eigen Mat */

@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
   <!-- All Arugements Definition -->
     <!-- Args of Tf Frames -->
@@ -42,9 +43,7 @@
     <param name="sub_wheel_odom_topic_" value="$(arg sub_wheel_odom_topic_)"/>
   </node>
 
-  <node pkg="rosbag" type="play" name="rosbag"
-        args="/home/ros/catkin_ws/src/darko/darko_ros_bag/acg/2022-11-28-17-40-18-robolab.bag --topics /robot/front_laser/scan /robot/throttle/odom -r5" />
-
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_demo)/rviz/odom.rviz"/>
-
 </launch>
+  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_demo)/rviz/odom.rviz"/> -->
+  <!-- <node pkg="rosbag" type="play" name="rosbag" args="/home/ros/catkin_ws/src/darko/darko_ros_bag/acg/2022-11-28-17-40-18-robolab.bag
+  topics /robot/front_laser/scan /robot/throttle/odom -r5" /> -->

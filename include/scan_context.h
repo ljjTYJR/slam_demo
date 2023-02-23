@@ -1,22 +1,20 @@
-#ifndef __SCAN_CONTEXT_MANGER_H
-#define __SCAN_CONTEXT_MANGER_H
-#include <Eigen/Dense>
-#include <vector>
-#include <utility>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
+#pragma once
 
+// customized
 #include "nanoflann.hpp"
 #include "KDTreeVectorOfVectorsAdaptor.h"
 #include "types.h"
+// Standard C/C++
+#include <vector>
+#include <utility>
+// Third party
+#include <Eigen/Dense>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
-/**
- * The header file for scan context class
-*/
 using RingKeyVecOfVecs = std::vector<std::vector<float> >;
 using RingKeyKDTree = KDTreeVectorOfVectorsAdaptor< RingKeyVecOfVecs, float >;
 double deg2rad(double degrees);
-
 
 class ScanContextManger {
 
@@ -27,7 +25,7 @@ class ScanContextManger {
         // pcl::PointCloud<pcl::PointXY>::Ptr cloud;    //TODO: decide whether to store the cloud, in the odometer or here
     }POINT_CLOUD_DSC_;
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 public:
     ScanContextManger();
@@ -72,5 +70,3 @@ private:
         std::unique_ptr<RingKeyKDTree> ring_key_kd_tree_;
 };
 
-
-#endif // __SCAN_CONTEXT_MANGER_H
