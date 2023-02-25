@@ -114,62 +114,58 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
     return;
 }
 
-/*
-bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res) {
-    RCLCPP_INFO("Slam::optimize_signal_callback()");
-    // save the optimized pose
-    pose_graph_.saveGraph("/home/ros/catkin_ws/src/darko/slam_demo/launch/before_path.g2o");
-    pose_graph_.optimize(15);
+// bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res) {
+//     RCLCPP_INFO("Slam::optimize_signal_callback()");
+//     // save the optimized pose
+//     pose_graph_.saveGraph("/home/ros/catkin_ws/src/darko/slam_demo/launch/before_path.g2o");
+//     pose_graph_.optimize(15);
 
-    // publish the optimized pose
-    RCLCPP_INFO("The number of vertices: %d", pose_graph_.optimizer_->vertices().size());
-    pcl::PointCloud<pcl::PointXYZ>::Ptr merged(new pcl::PointCloud<pcl::PointXYZ>());
-    nav_msgs::Path path;
-    for (unsigned int i = 0; i < pose_graph_.optimizer_->vertices().size(); ++i) {
-        // get the estimated pose of each vertex
-        auto vertex = pose_graph_.optimizer_->vertices().at(i);
-        auto estimate = dynamic_cast<g2o::VertexSE2*>(vertex)->estimate();
-        // convert the VertexSE2 pose to the matrix
-        auto position = estimate.translation();
-        auto orientation = estimate.rotation().angle();
+//     // publish the optimized pose
+//     RCLCPP_INFO("The number of vertices: %d", pose_graph_.optimizer_->vertices().size());
+//     pcl::PointCloud<pcl::PointXYZ>::Ptr merged(new pcl::PointCloud<pcl::PointXYZ>());
+//     nav_msgs::Path path;
+//     for (unsigned int i = 0; i < pose_graph_.optimizer_->vertices().size(); ++i) {
+//         // get the estimated pose of each vertex
+//         auto vertex = pose_graph_.optimizer_->vertices().at(i);
+//         auto estimate = dynamic_cast<g2o::VertexSE2*>(vertex)->estimate();
+//         // convert the VertexSE2 pose to the matrix
+//         auto position = estimate.translation();
+//         auto orientation = estimate.rotation().angle();
 
-        // publish the optimized pose
-        geometry_msgs::PoseStamped pose_msg;
-        pose_msg.header.frame_id = opt_pose_frame_;
-        pose_msg.header.stamp = ros::Time::now();
-        pose_msg.pose.position.x = position.x();
-        pose_msg.pose.position.y = position.y();
-        pose_msg.pose.position.z = 0.0;
-        pose_msg.pose.orientation = tf::createQuaternionMsgFromYaw(orientation);
-        // need to wait some time?
-        path.poses.push_back(pose_msg);
+//         // publish the optimized pose
+//         geometry_msgs::PoseStamped pose_msg;
+//         pose_msg.header.frame_id = opt_pose_frame_;
+//         pose_msg.header.stamp = ros::Time::now();
+//         pose_msg.pose.position.x = position.x();
+//         pose_msg.pose.position.y = position.y();
+//         pose_msg.pose.position.z = 0.0;
+//         pose_msg.pose.orientation = tf::createQuaternionMsgFromYaw(orientation);
+//         // need to wait some time?
+//         path.poses.push_back(pose_msg);
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr tmp_3d(new pcl::PointCloud<pcl::PointXYZ>()); // Create map
-        pcl::PointCloud<pcl::PointXYZ>::Ptr key_frame_3d(new pcl::PointCloud<pcl::PointXYZ>());
-        pcl::copyPointCloud(*odom_.key_frames_buffer_[i]->getCloud(), *key_frame_3d);
-        // pose_msg to matrix
-        Eigen::Matrix4f pose_mat;
-        pose_mat << cos(orientation), -sin(orientation), 0, position.x(),
-                    sin(orientation), cos(orientation), 0, position.y(),
-                    0, 0, 1, 0,
-                    0, 0, 0, 1;
-        pcl::transformPointCloud(*key_frame_3d, *tmp_3d, pose_mat);
+//         pcl::PointCloud<pcl::PointXYZ>::Ptr tmp_3d(new pcl::PointCloud<pcl::PointXYZ>()); // Create map
+//         pcl::PointCloud<pcl::PointXYZ>::Ptr key_frame_3d(new pcl::PointCloud<pcl::PointXYZ>());
+//         pcl::copyPointCloud(*odom_.key_frames_buffer_[i]->getCloud(), *key_frame_3d);
+//         // pose_msg to matrix
+//         Eigen::Matrix4f pose_mat;
+//         pose_mat << cos(orientation), -sin(orientation), 0, position.x(),
+//                     sin(orientation), cos(orientation), 0, position.y(),
+//                     0, 0, 1, 0,
+//                     0, 0, 0, 1;
+//         pcl::transformPointCloud(*key_frame_3d, *tmp_3d, pose_mat);
 
-        *merged += *tmp_3d;
-    }
-    path.header.stamp = ros::Time::now();
-    path.header.frame_id = opt_path_frame_;
-    opt_path_pub_->publish(path);
-    merged->header.frame_id = opt_path_frame_;
-    pcl_conversions::toPCL(ros::Time::now(), merged->header.stamp);
-    res_point_cloud_pub_->publish(*merged);
-    return true;
-}
-*/
+//         *merged += *tmp_3d;
+//     }
+//     path.header.stamp = ros::Time::now();
+//     path.header.frame_id = opt_path_frame_;
+//     opt_path_pub_->publish(path);
+//     merged->header.frame_id = opt_path_frame_;
+//     pcl_conversions::toPCL(ros::Time::now(), merged->header.stamp);
+//     res_point_cloud_pub_->publish(*merged);
+//     return true;
+// }
 
-/*
-void Slam::registerServices() {
-    opt_server_ = nh_.advertiseService("optimize_service", &Slam::optimize_signal_callback, this);
-    return;
-}
-*/
+// void Slam::registerServices() {
+//     opt_server_ = nh_.advertiseService("optimize_service", &Slam::optimize_signal_callback, this);
+//     return;
+// }

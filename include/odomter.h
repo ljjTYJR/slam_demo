@@ -100,7 +100,6 @@ private:
 
     // advertisers and subscribers
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr odom_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
     rclcpp::Time timer_;

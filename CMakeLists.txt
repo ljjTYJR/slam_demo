@@ -133,4 +133,10 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(
+  DIRECTORY
+  bag
+  DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()

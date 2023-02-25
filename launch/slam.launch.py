@@ -45,6 +45,16 @@ def generate_launch_description():
         )
     )
 
+    rosbag_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory(package_name),
+                'launch',
+                'rosbag_node.launch.py'
+            )
+        )
+    )
+
     # assign the same namespace
     slam_with_namespace = GroupAction(
      actions=[
@@ -52,6 +62,7 @@ def generate_launch_description():
          sensor_offset_node,
          slam_demo_node,
          rviz_node,
+         rosbag_node,
       ]
    )
 

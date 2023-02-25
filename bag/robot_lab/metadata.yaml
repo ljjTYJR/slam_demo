@@ -1,0 +1,49 @@
+rosbag2_bagfile_information:
+  compression_format: ''
+  compression_mode: ''
+  custom_data: {}
+  duration:
+    nanoseconds: 179195285477
+  files:
+  - duration:
+      nanoseconds: 179195285477
+    message_count: 42414
+    path: tmp.db3
+    starting_time:
+      nanoseconds_since_epoch: 1669653618319785549
+  message_count: 42414
+  relative_file_paths:
+  - tmp.db3
+  starting_time:
+    nanoseconds_since_epoch: 1669653618319785549
+  storage_identifier: sqlite3
+  topics_with_message_count:
+  - message_count: 3
+    topic_metadata:
+      name: /tf_static
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:
+        1\n  deadline:\n    sec: 2147483647\n    nsec: 4294967295\n  lifespan:\n    sec:
+        2147483647\n    nsec: 4294967295\n  liveliness: 1\n  liveliness_lease_duration:\n
+        \   sec: 2147483647\n    nsec: 4294967295\n  avoid_ros_namespace_conventions:
+        false"
+      serialization_format: cdr
+      type: tf2_msgs/msg/TFMessage
+  - message_count: 37016
+    topic_metadata:
+      name: /tf
+      offered_qos_profiles: ''
+      serialization_format: cdr
+      type: tf2_msgs/msg/TFMessage
+  - message_count: 4568
+    topic_metadata:
+      name: /robot/front_laser/scan
+      offered_qos_profiles: ''
+      serialization_format: cdr
+      type: sensor_msgs/msg/LaserScan
+  - message_count: 827
+    topic_metadata:
+      name: /robot/throttle/odom
+      offered_qos_profiles: ''
+      serialization_format: cdr
+      type: nav_msgs/msg/Odometry
+  version: 6

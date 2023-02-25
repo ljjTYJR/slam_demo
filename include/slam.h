@@ -46,19 +46,13 @@ private:
     // bool optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res);
     void laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg,
                                     const nav_msgs::msg::Odometry::ConstPtr& wheel_odom_msg);
-    /* TODO: register service */
-    void registerServices();
+    // void registerServices();
 
     /* Private data */
     rclcpp::Node::SharedPtr node_;
 
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr             opt_path_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr opt_pose_pub_;
-    /* TODO: publish the point cloud in ROS2 */
-    // rclcpp::Publisher<pcl::PointCloud<pcl::PointXYZ> >::SharedPtr res_point_cloud_pub_;
-    // std::shared_ptr<LaserSub> laser_sub_;
-    // std::shared_ptr<WheelOdomSub> wheel_odom_sub_;
-    // std::shared_ptr<message_filters::Synchronizer<LaserWheelSyncPolicy> > sync_wheelOdom_laser_sub_;
     LaserSub *laser_sub_;
     WheelOdomSub *wheel_odom_sub_;
     message_filters::Synchronizer<LaserWheelSyncPolicy> *sync_wheelOdom_laser_sub_;
@@ -75,7 +69,6 @@ private:
     Eigen::MatrixXd loop_inf_matrix_;
 
     Eigen::Matrix3d se2_info_laser_mat_;
-    // TODO: Service
     // rclcpp::ServiceServer opt_server_;
 
     // TODO: change the class object to the pointer
