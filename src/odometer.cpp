@@ -90,9 +90,9 @@ void Odometer::loadParameters() {
 
 void Odometer::advertisePublishers() {
   odom_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(pub_pose_topic_, 100);
-  laser_pub_ = node_->create_publisher<sensor_msgs::msg::LaserScan>(pub_laser_topic_, 100);
   path_pub_ = node_->create_publisher<nav_msgs::msg::Path>(pub_path_topic_, 10);
-  tf_broadcaster_map_to_robot_ = std::make_unique<tf2_ros::TransformBroadcaster>(node_);
+  cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(pub_laser_topic_, 10);
+  tf_broadcaster_map_to_robot_ = std::make_unique<tf2_ros::TransformBroadcaster>(*node_);
   RCLCPP_INFO(node_->get_logger(), "Advertised to %s, %s, %s", pub_pose_topic_.c_str(), pub_laser_topic_.c_str(), pub_path_topic_.c_str());
   return;
 }
@@ -107,21 +107,11 @@ Odometer::odomDealWithInputMessage(const sensor_msgs::msg::LaserScan::ConstPtr& 
 
   update = updateOdom();
   if (update) {
-    publishPose();
-    publishLaser(laser_msg);
+    publishPosePathAndPointCloud();
     key_frame_cnt = key_frames_buffer_.size();
   }
   // Here, minus 1 because the index should start from 0
   return std::make_tuple(update, key_frame_cnt - 1, latest_scan_);
-}
-
-void Odometer::point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_cloud, pcl::PointCloud<pcl::PointXY>::Ptr& output_cloud) {
-  output_cloud->points.resize(input_cloud->points.size());
-    for (unsigned int i = 0; i < input_cloud->points.size(); ++i) {
-        output_cloud->points[i].x = input_cloud->points[i].x;
-        output_cloud->points[i].y = input_cloud->points[i].y;
-    }
-  return;
 }
 
 void Odometer::readInLaserScan(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg) {
@@ -133,13 +123,15 @@ void Odometer::readInLaserScan(const sensor_msgs::msg::LaserScan::ConstPtr& lase
   static laser_geometry::LaserProjection laser_projector;
   sensor_msgs::msg::PointCloud2 pc_2;
   laser_projector.projectLaser(*laser_msg, pc_2);
+  // clear the latest_scan_
+  latest_scan_->points.clear();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
   pcl::fromROSMsg(pc_2, *input_cloud);
   if (use_darko_cfg_) {
       /* transform the read in point cloud to the coordinate of the robot, represented in the robot */
       pcl::transformPointCloud(*input_cloud, *input_cloud, sensor_offset_);
-      point3d2Point2d(input_cloud, latest_scan_);
+      point3d2point2d(input_cloud, latest_scan_);
   }
   latest_scan_->width = latest_scan_->points.size();
   latest_scan_->height = 1;
@@ -304,8 +296,7 @@ MatrixSE2 Odometer::icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev
   return T_final_eigen;
 }
 
-void Odometer::publishPose() {
-  static nav_msgs::msg::Path path;
+void Odometer::publishPosePathAndPointCloud() {
   geometry_msgs::msg::PoseStamped pose;
   pose.header.stamp = timer_;
   pose.header.frame_id = map_link;
@@ -320,9 +311,25 @@ void Odometer::publishPose() {
   pose.pose.position.z = 0;
   odom_pub_->publish(pose);
 
+  static nav_msgs::msg::Path path;
   path.header.frame_id = map_link;
   path.poses.push_back(pose);
   path_pub_->publish(path);
+
+  // publish the point cloud
+  sensor_msgs::msg::PointCloud2 cloud_msg;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_3d(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::copyPointCloud(*latest_scan_, *cloud_3d);
+  Eigen::Affine3d pose_mat = pose_stamped_to_eigen(pose);
+  pcl::transformPointCloud(*cloud_3d, *cloud_3d, pose_mat);
+  // print the number of points
+  RCLCPP_INFO(node_->get_logger(), "Number of points: %d", cloud_3d->points.size());
+  pcl::toROSMsg(*cloud_3d, cloud_msg);
+  cloud_msg.header.frame_id = map_link;
+  cloud_msg.header.stamp = timer_;
+  // show the time
+  RCLCPP_INFO(node_->get_logger(), "Time: %f", timer_.seconds());
+  cloud_pub_->publish(cloud_msg);
 
   //send transfrom
   geometry_msgs::msg::TransformStamped tr;
@@ -337,29 +344,6 @@ void Odometer::publishPose() {
   tr.transform.rotation.z = pose.pose.orientation.z;
   tr.transform.rotation.w = pose.pose.orientation.w;
   tf_broadcaster_map_to_robot_->sendTransform(tr);
-}
-
-// Todo: use the readin laser scan
-void Odometer::publishLaser(const sensor_msgs::msg::LaserScan::ConstPtr& msg) {
-  // change the msg type to test what happens
-  sensor_msgs::msg::LaserScan laserscan;
-  laserscan.header.stamp = timer_;
-  laserscan.header.frame_id = sensor_link;
-  laserscan.angle_min = msg->angle_min;
-  laserscan.angle_max = msg->angle_max;
-  laserscan.angle_increment = msg->angle_increment;
-  laserscan.time_increment = msg->time_increment;
-  laserscan.scan_time = msg->scan_time;
-  laserscan.range_min = msg->range_min;
-  laserscan.range_max = msg->range_max;
-  laserscan.ranges.resize(msg->ranges.size());
-  laserscan.intensities.resize(msg->ranges.size());
-  for (unsigned int i = 0; i < msg->ranges.size(); i++)
-  {
-      laserscan.ranges[i] = msg->ranges[i];
-      laserscan.intensities[i] = msg->intensities[i];
-  }
-  laser_pub_->publish(laserscan);
 }
 
 Odometer::~Odometer()

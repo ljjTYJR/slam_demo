@@ -3,6 +3,7 @@
 // customized
 #include "types.h"
 #include "keyframe.h"
+#include "helper.h"
 // standard C/C++
 #include <iostream>
 #include <string>
@@ -23,6 +24,9 @@
     #include <tf2_ros/transform_broadcaster.h>
     #include <tf2_ros/transform_listener.h>
     #include <tf2_eigen/tf2_eigen.hpp>
+    #include <geometry_msgs/msg/pose_stamped.hpp>
+    #include <sensor_msgs/msg/point_cloud2.hpp>
+
 // PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
@@ -71,9 +75,7 @@ private:
     void addNewKeyFrame(const MatrixSE2& pose, const MatrixSE2& relative_measure, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud);
     bool transLargeEnough(const MatrixSE2& pose);
     bool updateOdom();
-    void publishPose();
-    void publishLaser(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg);
-    void point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXY>::Ptr& cloud_out);
+    void publishPosePathAndPointCloud();
 
     /* private data */
     rclcpp::Node::SharedPtr node_;
@@ -100,6 +102,7 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr odom_pub_;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laser_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
     rclcpp::Time timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_map_to_robot_;
 

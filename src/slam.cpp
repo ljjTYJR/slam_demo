@@ -1,6 +1,5 @@
 // customed
 #include "slam.h"
-#include "helper.h"
 // Third party
 #include <Eigen/Dense>
 #include <boost/bind.hpp>

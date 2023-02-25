@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(slam_demo)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -70,6 +70,7 @@ set(SOURCES
     src/pose_graph.cpp
     src/scan_context.cpp
     src/visualization.cpp
+    src/helper.cpp
 )
 
 add_executable(slam_node slam_node.cpp ${SOURCES})
