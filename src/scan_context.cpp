@@ -145,7 +145,7 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
     }
     // every `kSkipLaestFrames` frames, reconstruct the ring key tree
     if (point_cloud_dsc_buffer_.size() % kSkipLaestFrames == 0) {
-        RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Reconstruct the ring key tree.");
+        // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Reconstruct the ring key tree.");
         tmp_ring_key_search_base_.clear();
         tmp_ring_key_search_base_.assign(ring_key_buffer_.begin(), ring_key_buffer_.end() - kSkipLaestFrames + 1);  //avoid to search the latest frames, in addition, plus 1
 
@@ -180,12 +180,12 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // in ms
-    RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "The time of searching the scan context is %d ms", duration_ms.count());
+    // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "The time of searching the scan context is %d ms", duration_ms.count());
 
     if (min_dist < kSC_DIST_THRES) {
         loop_id = point_cloud_dsc_buffer_[nn_idx].id;
         loop_angle = deg2rad(nn_shift * kSectorResolution); // 0-2pi
-        RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Loop closure detected, the loop id is %d, the shift is %d", loop_id, nn_shift);
+        // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Loop closure detected, the loop id is %d, the shift is %d", loop_id, nn_shift);
     }
     return std::make_pair(loop_id, loop_angle);
 }

@@ -44,6 +44,8 @@ void Slam::declareParameters() {
     node_->declare_parameter<std::string>("opt_path_frame_", "map_link");
     node_->declare_parameter<std::string>("opt_pose_frame_", "map_link");
     node_->declare_parameter<std::string>("res_point_cloud_topic_", "res_point_cloud");
+    node_->declare_parameter<bool>("save_g2o_file_", false);
+    node_->declare_parameter<int>("opt_graph_iter_", 15);
 
     RCLCPP_INFO(node_->get_logger(), "Slam: declare all parameters");
 
@@ -53,10 +55,10 @@ void Slam::declareParameters() {
 void Slam::loadParameters() {
 
     for (int i = 0; i < laser_odom_inf_matrix_.rows(); ++i) {
-        laser_odom_inf_matrix_(i, i) = 0.2;
+        laser_odom_inf_matrix_(i, i) = 0.1;
     }
     for (int i = 0; i < loop_inf_matrix_.rows(); ++i) {
-        loop_inf_matrix_(i, i) = 0.1;
+        loop_inf_matrix_(i, i) = 0.2;
     }
 
     node_->get_parameter("sub_wheel_odom_topic_", sub_wheel_odom_topic_);
@@ -66,6 +68,8 @@ void Slam::loadParameters() {
     node_->get_parameter("opt_path_frame_", opt_path_frame_);
     node_->get_parameter("opt_pose_frame_", opt_pose_frame_);
     node_->get_parameter("res_point_cloud_topic_", res_point_cloud_topic_);
+    node_->get_parameter("save_g2o_file_", save_g2o_file_);
+    node_->get_parameter("opt_graph_iter_", opt_graph_iter_);
 
     RCLCPP_INFO(node_->get_logger(), "Slam: load all parameters");
     return;
@@ -97,9 +101,6 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
     bool is_new_key_frame = std::get<0>(odom_res);
     unsigned int key_frame_id = std::get<1>(odom_res);
     if (is_new_key_frame == true) {
-        /* add a new key frame */
-        RCLCPP_INFO(node_->get_logger(), "add a new key frame");
-
         pose_graph_.addSE2Node(odom_.key_frames_buffer_.back()->getPose());
         pose_graph_.addSE2Edge(key_frame_id-1, key_frame_id, odom_.key_frames_buffer_.back()->getRelativeMeasure(), laser_odom_inf_matrix_);
 
@@ -107,15 +108,16 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
         unsigned int loop_id = sc_res.first;
         double rot_angle = sc_res.second;
         if (loop_id != -1) { /* Find the loop closure by the scene context */
-            RCLCPP_INFO(node_->get_logger(), "key_frame_id: %d, loop_id: %d", key_frame_id, loop_id);
             bool isPossibleLoop = scan_context_manger_.isPossibleLoop(odom_.key_frames_buffer_[key_frame_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose());
             if (!isPossibleLoop) {
                 return;
             }
+            RCLCPP_INFO(node_->get_logger(), "key_frame_id: %d, loop_id: %d", key_frame_id, loop_id);
             visualization_.publishLineOfTwoPoses(odom_.key_frames_buffer_[key_frame_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose(), opt_path_frame_, 10000);
              /* The `rot_angle` means rotate the `key_frame_id` to the `loop_id`*/
             MatrixSE2 prior_guess = ang2Mat(rot_angle);
             MatrixSE2 loop_est = odom_.icpPointMatch(odom_.key_frames_buffer_[loop_id]->getCloud(), odom_.key_frames_buffer_[key_frame_id]->getCloud(), prior_guess);
+            // if not adding the loop closure, the graph should not change
             pose_graph_.addSE2Edge(loop_id, key_frame_id, loop_est, loop_inf_matrix_);
         }
     }
@@ -124,8 +126,13 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
 
 bool Slam::optTopicCallback(const std_msgs::msg::String::SharedPtr msg) {
     RCLCPP_INFO(node_->get_logger(), "Optimize the pose graph");
-    // save the optimized pose
-    pose_graph_.optimize(15);
+    if (save_g2o_file_) {
+        pose_graph_.saveGraph("/home/shuo/tmp/before_opt.g2o");
+    }
+    pose_graph_.optimize(opt_graph_iter_);
+    if (save_g2o_file_) {
+        pose_graph_.saveGraph("/home/shuo/tmp/after_opt.g2o");
+    }
 
     // publish the optimized pose
     RCLCPP_INFO(node_->get_logger(), "The number of optimized pose: %d", pose_graph_.optimizer_->vertices().size());

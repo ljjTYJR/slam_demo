@@ -322,13 +322,9 @@ void Odometer::publishPosePathAndPointCloud() {
   pcl::copyPointCloud(*latest_scan_, *cloud_3d);
   Eigen::Affine3d pose_mat = pose_stamped_to_eigen(pose);
   pcl::transformPointCloud(*cloud_3d, *cloud_3d, pose_mat);
-  // print the number of points
-  RCLCPP_INFO(node_->get_logger(), "Number of points: %d", cloud_3d->points.size());
   pcl::toROSMsg(*cloud_3d, cloud_msg);
   cloud_msg.header.frame_id = map_link;
   cloud_msg.header.stamp = timer_;
-  // show the time
-  RCLCPP_INFO(node_->get_logger(), "Time: %f", timer_.seconds());
   cloud_pub_->publish(cloud_msg);
 
   //send transfrom

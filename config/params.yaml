@@ -22,6 +22,10 @@ slam:
     ros__parameters:
       sub_wheel_odom_topic_: "/robot/throttle/odom"
       sub_laser_topic_: "/robot/front_laser/scan"
+      use_wheel_odom_prior_guess_: true
+      save_g2o_file_: true
+      opt_graph_iter_: 30
+
 
   rviz2:
     ros__parameters:

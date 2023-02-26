@@ -54,9 +54,9 @@ private:
     // TODO: the hyper-parameters need to be tuned
         const unsigned int kNumRings = 20;
         const unsigned int kNumSector = 60;
-        const unsigned int kSkipLaestFrames = 20;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
+        const unsigned int kSkipLaestFrames = 25;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
         const unsigned int kNumRingKeyQuery = 10;        // The number of key frames(ring key) to query
-        const double kLoopDistThres = 0.5;                // The maximum distance between two possbile poses
+        const double kLoopDistThres = 0.3;                // The maximum distance between two possbile poses
         const double kMaxRadius = 10.0;             // meter
         const double kSectorResolution = 360.0 / (double)(kNumSector);
         const double kRingResolution = kMaxRadius / (double)(kNumRings);

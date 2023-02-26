@@ -61,8 +61,8 @@ def generate_launch_description():
          PushRosNamespace(name_space),
          sensor_offset_node,
          slam_demo_node,
-         rviz_node,
-         rosbag_node,
+        #  rviz_node,
+        #  rosbag_node,
       ]
    )
 

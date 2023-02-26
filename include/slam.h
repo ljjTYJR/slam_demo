@@ -67,6 +67,8 @@ private:
     std::string pub_opt_pose_topic_;
     std::string opt_pose_frame_;
     std::string res_point_cloud_topic_;
+    bool save_g2o_file_;
+    int opt_graph_iter_;
 
     Eigen::MatrixXd laser_odom_inf_matrix_;
     Eigen::MatrixXd loop_inf_matrix_;
