@@ -7,7 +7,7 @@
 #include "pose_graph.h"
 #include "scan_context.h"
 #include "visualization.h"
-// #include "slam_demo/OptSrv.h"
+#include "helper.h"
 
 // Third party
 #include <Eigen/Dense>
@@ -17,6 +17,7 @@
 
 // ROS2
 #include "rclcpp/rclcpp.hpp"
+#include <std_msgs/msg/string.hpp>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -43,19 +44,21 @@ private:
     void loadParameters();
     void advertisePublishers();
     void registerSubscribers();
-    // bool optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res);
     void laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg,
                                     const nav_msgs::msg::Odometry::ConstPtr& wheel_odom_msg);
-    // void registerServices();
+    bool optTopicCallback(const std_msgs::msg::String::SharedPtr msg);
 
     /* Private data */
     rclcpp::Node::SharedPtr node_;
 
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr             opt_path_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr opt_pose_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr    res_point_cloud_pub_;
     LaserSub *laser_sub_;
     WheelOdomSub *wheel_odom_sub_;
     message_filters::Synchronizer<LaserWheelSyncPolicy> *sync_wheelOdom_laser_sub_;
+    // NOTE: For subscribe to the optimization topic
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_opt_topic_;
 
     std::string sub_wheel_odom_topic_;
     std::string sub_laser_topic_;
@@ -69,7 +72,6 @@ private:
     Eigen::MatrixXd loop_inf_matrix_;
 
     Eigen::Matrix3d se2_info_laser_mat_;
-    // rclcpp::ServiceServer opt_server_;
 
     // TODO: change the class object to the pointer
     Odometer odom_;

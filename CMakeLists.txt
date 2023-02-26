@@ -20,6 +20,7 @@ find_package(pcl_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 # 3-rd party packages
@@ -30,6 +31,15 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(G2O REQUIRED)
 find_package(libpointmatcher 1.1.0 REQUIRED)
+
+list(APPEND G2O_LIBS
+  g2o_solver_slam2d_linear g2o_types_icp g2o_types_slam2d
+  g2o_core g2o_solver_csparse g2o_solver_structure_only
+  g2o_types_sba g2o_types_slam3d g2o_csparse_extension
+  g2o_solver_dense g2o_stuff
+  g2o_types_sclam2d g2o_solver_pcg
+  g2o_types_data g2o_types_sim3
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -52,15 +62,6 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${G2O_INCLUDE_DIR}
   ${libpointmatcher_INCLUDE_DIRS}
-)
-
-list(APPEND G2O_LIBS
-  g2o_solver_slam2d_linear g2o_types_icp g2o_types_slam2d
-  g2o_core g2o_solver_csparse g2o_solver_structure_only
-  g2o_types_sba g2o_types_slam3d g2o_csparse_extension
-  g2o_solver_dense g2o_stuff
-  g2o_types_sclam2d g2o_solver_pcg
-  g2o_types_data g2o_types_sim3
 )
 
 # add the source files
@@ -87,6 +88,7 @@ ament_target_dependencies(
   tf2_ros
   tf2_eigen
   tf2
+  tf2_geometry_msgs
   visualization_msgs
 )
 target_link_libraries(
@@ -107,11 +109,19 @@ ament_target_dependencies(
   tf2_ros
 )
 
+add_executable(opt_topic_pub_node code_snippet/opt_topic_pub.cpp)
+ament_target_dependencies(
+  opt_topic_pub_node
+  rclcpp
+  std_msgs
+  tf2_ros
+)
 
 install(
   TARGETS
   slam_node
   sensor_offset_node
+  opt_topic_pub_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

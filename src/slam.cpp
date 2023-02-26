@@ -7,6 +7,13 @@
 // standard C/C++
 #include <unistd.h>
 #include <memory>
+// ROS2
+#include <rclcpp/clock.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 Slam::Slam(const rclcpp::Node::SharedPtr node)
     : node_(node),
@@ -67,8 +74,8 @@ void Slam::loadParameters() {
 void Slam::advertisePublishers() {
     opt_path_pub_ = node_->create_publisher<nav_msgs::msg::Path>(pub_opt_path_topic_, 10);
     opt_pose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(pub_opt_pose_topic_, 10);
+    res_point_cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(res_point_cloud_topic_, 10);
     RCLCPP_INFO(node_->get_logger(), "Slam: advertise all publishers");
-    // res_point_cloud_pub_ = node_->create_publisher<pcl::PointCloud<pcl::PointXYZ> >(res_point_cloud_topic_, 10);
     return;
 }
 
@@ -77,6 +84,7 @@ void Slam::registerSubscribers() {
     wheel_odom_sub_ = new message_filters::Subscriber<nav_msgs::msg::Odometry>(node_, sub_wheel_odom_topic_);
     sync_wheelOdom_laser_sub_ = new message_filters::Synchronizer<LaserWheelSyncPolicy>(LaserWheelSyncPolicy(100), *laser_sub_, *wheel_odom_sub_);
     sync_wheelOdom_laser_sub_->registerCallback(boost::bind(&Slam::laserWheelOdomSyncCallback, this, _1, _2));
+    sub_opt_topic_ = node_->create_subscription<std_msgs::msg::String>("opt_topic", 10, std::bind(&Slam::optTopicCallback, this, std::placeholders::_1));
     RCLCPP_INFO(node_->get_logger(), "Slam: register all subscribers");
     return;
 }
@@ -114,58 +122,50 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
     return;
 }
 
-// bool Slam::optimize_signal_callback(slam_demo::OptSrv::Request& req, slam_demo::OptSrv::Response& res) {
-//     RCLCPP_INFO("Slam::optimize_signal_callback()");
-//     // save the optimized pose
-//     pose_graph_.saveGraph("/home/ros/catkin_ws/src/darko/slam_demo/launch/before_path.g2o");
-//     pose_graph_.optimize(15);
+bool Slam::optTopicCallback(const std_msgs::msg::String::SharedPtr msg) {
+    RCLCPP_INFO(node_->get_logger(), "Optimize the pose graph");
+    // save the optimized pose
+    pose_graph_.optimize(15);
 
-//     // publish the optimized pose
-//     RCLCPP_INFO("The number of vertices: %d", pose_graph_.optimizer_->vertices().size());
-//     pcl::PointCloud<pcl::PointXYZ>::Ptr merged(new pcl::PointCloud<pcl::PointXYZ>());
-//     nav_msgs::Path path;
-//     for (unsigned int i = 0; i < pose_graph_.optimizer_->vertices().size(); ++i) {
-//         // get the estimated pose of each vertex
-//         auto vertex = pose_graph_.optimizer_->vertices().at(i);
-//         auto estimate = dynamic_cast<g2o::VertexSE2*>(vertex)->estimate();
-//         // convert the VertexSE2 pose to the matrix
-//         auto position = estimate.translation();
-//         auto orientation = estimate.rotation().angle();
+    // publish the optimized pose
+    RCLCPP_INFO(node_->get_logger(), "The number of optimized pose: %d", pose_graph_.optimizer_->vertices().size());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr merged(new pcl::PointCloud<pcl::PointXYZ>());
+    nav_msgs::msg::Path path;
+    for (unsigned int i = 0; i < pose_graph_.optimizer_->vertices().size(); ++i) {
+        // get the estimated pose of each vertex
+        auto vertex = pose_graph_.optimizer_->vertices().at(i);
+        auto estimate = dynamic_cast<g2o::VertexSE2*>(vertex)->estimate();
+        // convert the VertexSE2 pose to the matrix
+        auto position = estimate.translation();
+        auto orientation = estimate.rotation().angle();
 
-//         // publish the optimized pose
-//         geometry_msgs::PoseStamped pose_msg;
-//         pose_msg.header.frame_id = opt_pose_frame_;
-//         pose_msg.header.stamp = ros::Time::now();
-//         pose_msg.pose.position.x = position.x();
-//         pose_msg.pose.position.y = position.y();
-//         pose_msg.pose.position.z = 0.0;
-//         pose_msg.pose.orientation = tf::createQuaternionMsgFromYaw(orientation);
-//         // need to wait some time?
-//         path.poses.push_back(pose_msg);
+        // publish the optimized pose
+        geometry_msgs::msg::PoseStamped pose_msg;
+        pose_msg.header.frame_id = opt_pose_frame_;
+        pose_msg.header.stamp = rclcpp::Clock().now();
+        pose_msg.pose.position.x = position.x();
+        pose_msg.pose.position.y = position.y();
+        pose_msg.pose.position.z = 0.0;
+        pose_msg.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0, 0, 1), orientation));
+        // need to wait some time?
+        path.poses.push_back(pose_msg);
 
-//         pcl::PointCloud<pcl::PointXYZ>::Ptr tmp_3d(new pcl::PointCloud<pcl::PointXYZ>()); // Create map
-//         pcl::PointCloud<pcl::PointXYZ>::Ptr key_frame_3d(new pcl::PointCloud<pcl::PointXYZ>());
-//         pcl::copyPointCloud(*odom_.key_frames_buffer_[i]->getCloud(), *key_frame_3d);
-//         // pose_msg to matrix
-//         Eigen::Matrix4f pose_mat;
-//         pose_mat << cos(orientation), -sin(orientation), 0, position.x(),
-//                     sin(orientation), cos(orientation), 0, position.y(),
-//                     0, 0, 1, 0,
-//                     0, 0, 0, 1;
-//         pcl::transformPointCloud(*key_frame_3d, *tmp_3d, pose_mat);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr tmp_3d(new pcl::PointCloud<pcl::PointXYZ>()); // Create map
+        pcl::PointCloud<pcl::PointXYZ>::Ptr key_frame_3d(new pcl::PointCloud<pcl::PointXYZ>());
+        pcl::copyPointCloud(*odom_.key_frames_buffer_[i]->getCloud(), *key_frame_3d);
+        // pose_msg to matrix
+        Eigen::Affine3d pose_mat = pose_stamped_to_eigen(pose_msg);
+        pcl::transformPointCloud(*key_frame_3d, *tmp_3d, pose_mat);
 
-//         *merged += *tmp_3d;
-//     }
-//     path.header.stamp = ros::Time::now();
-//     path.header.frame_id = opt_path_frame_;
-//     opt_path_pub_->publish(path);
-//     merged->header.frame_id = opt_path_frame_;
-//     pcl_conversions::toPCL(ros::Time::now(), merged->header.stamp);
-//     res_point_cloud_pub_->publish(*merged);
-//     return true;
-// }
-
-// void Slam::registerServices() {
-//     opt_server_ = nh_.advertiseService("optimize_service", &Slam::optimize_signal_callback, this);
-//     return;
-// }
+        *merged += *tmp_3d;
+    }
+    path.header.stamp = rclcpp::Clock().now();
+    path.header.frame_id = opt_path_frame_;
+    opt_path_pub_->publish(path);
+    sensor_msgs::msg::PointCloud2 merged_msg;
+    pcl::toROSMsg(*merged, merged_msg);
+    merged_msg.header.frame_id = opt_pose_frame_;
+    merged_msg.header.stamp = rclcpp::Clock().now();
+    res_point_cloud_pub_->publish(merged_msg);
+    return true;
+}
