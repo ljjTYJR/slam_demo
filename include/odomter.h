@@ -82,7 +82,8 @@ private:
 
     const double kMinDist_ = 0.30; //0.20m
     const double kMinRot_ = 3.0 * M_PI / 180.0; //2.5 degree
-
+    // parameters get from yaml file
+    double farthest_point_dist = 10.0;
     // frames
     std::string sensor_link;
     std::string map_link;

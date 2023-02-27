@@ -57,7 +57,7 @@ private:
         const unsigned int kSkipLaestFrames = 25;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
         const unsigned int kNumRingKeyQuery = 10;        // The number of key frames(ring key) to query
         const double kLoopDistThres = 0.3;                // The maximum distance between two possbile poses
-        const double kMaxRadius = 10.0;             // meter
+        const double kMaxRadius = 5.0;             // meter
         const double kSectorResolution = 360.0 / (double)(kNumSector);
         const double kRingResolution = kMaxRadius / (double)(kNumRings);
         const double kSC_DIST_THRES = 0.5;        // The threshold of the distance between two scan contexts (get from original implementation)

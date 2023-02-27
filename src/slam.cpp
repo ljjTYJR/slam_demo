@@ -116,10 +116,23 @@ void Slam::laserWheelOdomSyncCallback(const sensor_msgs::msg::LaserScan::ConstPt
             RCLCPP_INFO(node_->get_logger(), "key_frame_id: %d, loop_id: %d", key_frame_id, loop_id);
             visualization_.publishLineOfTwoPoses(odom_.key_frames_buffer_[key_frame_id]->getPose(), odom_.key_frames_buffer_[loop_id]->getPose(), opt_path_frame_, 10000);
              /* The `rot_angle` means rotate the `key_frame_id` to the `loop_id`*/
-            MatrixSE2 prior_guess = ang2Mat(rot_angle);
+            // use the odometry measurement as the prior guess
+            auto prior_guess = odom_.key_frames_buffer_[loop_id]->getPose().inverse() * odom_.key_frames_buffer_[key_frame_id]->getPose();
             MatrixSE2 loop_est = odom_.icpPointMatch(odom_.key_frames_buffer_[loop_id]->getCloud(), odom_.key_frames_buffer_[key_frame_id]->getCloud(), prior_guess);
-            // if not adding the loop closure, the graph should not change
+            std::cout << "prior_guess = " << std::endl << prior_guess.matrix() << std::endl;
             pose_graph_.addSE2Edge(loop_id, key_frame_id, loop_est, loop_inf_matrix_);
+            // save the data of the point clouds
+            if (save_g2o_file_) {
+                std::string pt_loop = "/home/shuo/tmp/id" + std::to_string(loop_id) + ".pcd";
+                // convert 2d point cloud to 3d
+                pcl::PointCloud<pcl::PointXYZ>::Ptr loop_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+                pcl::copyPointCloud(*odom_.key_frames_buffer_[loop_id]->getCloud(), *loop_cloud);
+                pcl::io::savePCDFileASCII(pt_loop, *loop_cloud);
+                std::string pt_key = "/home/shuo/tmp/id" + std::to_string(key_frame_id) + ".pcd";
+                pcl::PointCloud<pcl::PointXYZ>::Ptr key_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+                pcl::copyPointCloud(*odom_.key_frames_buffer_[key_frame_id]->getCloud(), *key_cloud);
+                pcl::io::savePCDFileASCII(pt_key, *key_cloud);
+            }
         }
     }
     return;

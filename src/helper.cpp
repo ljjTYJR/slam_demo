@@ -13,11 +13,29 @@ MatrixSE2 ang2Mat(double ang) {
 }
 
 /* convert 3d point cloud to 2d point cloud */
-void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr &cloud_in, pcl::PointCloud<PointType>::Ptr &cloud_out) {
-    cloud_out->points.resize(cloud_in->points.size());
-    for (unsigned int i = 0; i < cloud_in->points.size(); ++i) {
-        cloud_out->points[i].x = cloud_in->points[i].x;
-        cloud_out->points[i].y = cloud_in->points[i].y;
+void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr &cloud_in, pcl::PointCloud<PointType>::Ptr &cloud_out,
+                     double prune_dist) {
+    if (prune_dist == 0) {
+        /* Not pruning points */
+        cloud_out->points.resize(cloud_in->points.size());
+        for (unsigned int i = 0; i < cloud_in->points.size(); ++i) {
+            cloud_out->points[i].x = cloud_in->points[i].x;
+            cloud_out->points[i].y = cloud_in->points[i].y;
+        }
+    } else if (prune_dist > 0) {
+        /* Pruning points */
+        cloud_out->points.resize(cloud_in->points.size());
+        unsigned int j = 0;
+        for (unsigned int i = 0; i < cloud_in->points.size(); ++i) {
+            if (cloud_in->points[i].x * cloud_in->points[i].x + cloud_in->points[i].y * cloud_in->points[i].y < prune_dist * prune_dist) {
+                cloud_out->points[j].x = cloud_in->points[i].x;
+                cloud_out->points[j].y = cloud_in->points[i].y;
+                j++;
+            }
+        }
+        cloud_out->points.resize(j);
+    } else {
+        std::cout << "prune_dist should be non-negative" << std::endl;
     }
     return;
 }

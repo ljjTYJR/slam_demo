@@ -42,6 +42,8 @@ void Odometer::declareParameters() {
   node_->declare_parameter<bool>("use_laser_", true);
   node_->declare_parameter<bool>("use_darko_cfg_", true);
   node_->declare_parameter<bool>("use_wheel_odom_prior_guess_", true);
+  // hyperparameters
+  node_->declare_parameter<double>("farthest_point_dist", 10.0);
   return;
 }
 
@@ -83,6 +85,8 @@ void Odometer::loadParameters() {
   node_->get_parameter("use_laser_", use_laser_);
   node_->get_parameter("use_darko_cfg_", use_darko_cfg_);
   node_->get_parameter("use_wheel_odom_prior_guess_", use_wheel_odom_prior_guess_);
+  // hyperparameters
+  node_->get_parameter("farthest_point_dist", farthest_point_dist);
 
   sensor_offset_ = getSensorOffset().cast<double>().matrix();
   return;
@@ -131,7 +135,7 @@ void Odometer::readInLaserScan(const sensor_msgs::msg::LaserScan::ConstPtr& lase
   if (use_darko_cfg_) {
       /* transform the read in point cloud to the coordinate of the robot, represented in the robot */
       pcl::transformPointCloud(*input_cloud, *input_cloud, sensor_offset_);
-      point3d2point2d(input_cloud, latest_scan_);
+      point3d2point2d(input_cloud, latest_scan_, farthest_point_dist);
   }
   latest_scan_->width = latest_scan_->points.size();
   latest_scan_->height = 1;

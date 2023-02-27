@@ -20,7 +20,7 @@ typedef pcl::PointXYZ PointType3;
 MatrixSE2 ang2Mat(double ang);
 
 /* convert 3d point cloud to 2d point cloud */
-void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr &cloud_in, pcl::PointCloud<PointType>::Ptr &cloud_out);
+void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr &cloud_in, pcl::PointCloud<PointType>::Ptr &cloud_out, double prune_dist = 0.0);
 
 Eigen::Affine3d pose_stamped_to_eigen(const geometry_msgs::msg::PoseStamped& pose_msg);
 
