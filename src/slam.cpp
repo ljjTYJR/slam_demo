@@ -46,20 +46,21 @@ void Slam::declareParameters() {
     node_->declare_parameter<std::string>("res_point_cloud_topic_", "res_point_cloud");
     node_->declare_parameter<bool>("save_g2o_file_", false);
     node_->declare_parameter<int>("opt_graph_iter_", 15);
-
+    node_->declare_parameter<std::vector<double>>("odom_info_vec", std::vector<double>{});
+    node_->declare_parameter<std::vector<double>>("loop_info_vec", std::vector<double>{});
     RCLCPP_INFO(node_->get_logger(), "Slam: declare all parameters");
 
     return;
 }
 
 void Slam::loadParameters() {
-
-    for (int i = 0; i < laser_odom_inf_matrix_.rows(); ++i) {
-        laser_odom_inf_matrix_(i, i) = 0.1;
-    }
-    for (int i = 0; i < loop_inf_matrix_.rows(); ++i) {
-        loop_inf_matrix_(i, i) = 0.2;
-    }
+    auto param_loop_inf_vec = node_->get_parameter("loop_info_vec").as_double_array();
+    auto param_laser_odom_inf_vec = node_->get_parameter("odom_info_vec").as_double_array();
+    convertVecToInfoMat(param_laser_odom_inf_vec, laser_odom_inf_matrix_);
+    convertVecToInfoMat(param_loop_inf_vec, loop_inf_matrix_);
+    // print the matrix
+    std::cout << "laser_odom_inf_matrix_ = " << std::endl << laser_odom_inf_matrix_ << std::endl;
+    std::cout << "loop_inf_matrix_ = " << std::endl << loop_inf_matrix_ << std::endl;
 
     node_->get_parameter("sub_wheel_odom_topic_", sub_wheel_odom_topic_);
     node_->get_parameter("sub_laser_topic_", sub_laser_topic_);

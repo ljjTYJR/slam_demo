@@ -25,7 +25,7 @@ g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose) {
     node->setId(optimizer_->vertices().size());
     node->setEstimate(pose);
     if (optimizer_->vertices().size() == 0) /* set the first frame as the fixed one */
-        node->setFixed(true);
+        node->setFixed(false);
     else
         node->setFixed(false);
     optimizer_->addVertex(node);

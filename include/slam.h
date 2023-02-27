@@ -71,7 +71,9 @@ private:
     int opt_graph_iter_;
 
     Eigen::MatrixXd laser_odom_inf_matrix_;
+    std::vector<double> laser_odom_inf_vec_ = {1.0, 1.0, 1.0};
     Eigen::MatrixXd loop_inf_matrix_;
+    std::vector<double> loop_inf_vec_ = {1.0, 1.0, 1.0};
 
     Eigen::Matrix3d se2_info_laser_mat_;
 

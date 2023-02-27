@@ -39,3 +39,29 @@ Eigen::Affine3d pose_stamped_to_eigen(const geometry_msgs::msg::PoseStamped& pos
 
   return eigen_pose;
 }
+
+void convertVecToInfoMat(const std::vector<double> &vec, Eigen::MatrixXd &mat) {
+    if (vec.size() == 6) {
+        mat(0, 0) = vec[0];
+
+        mat(1, 0) = vec[1];
+        mat(0, 1) = vec[1];
+
+        mat(0, 2) = vec[2];
+        mat(2, 0) = vec[2];
+
+        mat(1, 1) = vec[3];
+
+        mat(1, 2) = vec[4];
+        mat(2, 1) = vec[4];
+
+        mat(3, 3) = vec[5];
+    } else if (vec.size() == 3) {
+        mat(0, 0) = vec[0];
+        mat(1, 1) = vec[1];
+        mat(2, 2) = vec[2];
+    } else {
+        std::cout << "Error: the size of the vector is not 3 or 6" << std::endl;
+        exit(1);
+    }
+}

@@ -24,7 +24,9 @@ slam:
       sub_laser_topic_: "/robot/front_laser/scan"
       use_wheel_odom_prior_guess_: true
       save_g2o_file_: true
-      opt_graph_iter_: 30
+      opt_graph_iter_: 15
+      loop_info_vec: [100.0, 100.0, 1000.0]
+      odom_info_vec: [101.0, 100.0, 1000.0]
 
 
   rviz2:

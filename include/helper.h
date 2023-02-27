@@ -3,6 +3,7 @@
 #include <Eigen/Eigen>
 #include <math.h>
 #include <iostream>
+#include <vector>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -22,3 +23,5 @@ MatrixSE2 ang2Mat(double ang);
 void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr &cloud_in, pcl::PointCloud<PointType>::Ptr &cloud_out);
 
 Eigen::Affine3d pose_stamped_to_eigen(const geometry_msgs::msg::PoseStamped& pose_msg);
+
+void convertVecToInfoMat(const std::vector<double> &vec, Eigen::MatrixXd &mat);
