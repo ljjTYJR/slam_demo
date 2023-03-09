@@ -1,7 +1,7 @@
-#include "pose_graph.h"
-#include <g2o/core/sparse_optimizer.h>
+#include "slam_demo/pose_graph.h"
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
+#include <g2o/core/sparse_optimizer.h>
 #include <g2o/solvers/dense/linear_solver_dense.h>
 #include "rclcpp/rclcpp.hpp"
 
@@ -11,10 +11,12 @@ PoseGraph::PoseGraph() {
     optimizer_->setVerbose(false);
 
     typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1>> BlockSolverType;
-    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType;
+    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType>
+        LinearSolverType;
     auto linearSolver = g2o::make_unique<LinearSolverType>();
     auto solver = g2o::make_unique<BlockSolverType>(std::move(linearSolver));
-    g2o::OptimizationAlgorithmGaussNewton* algorithm = new g2o::OptimizationAlgorithmGaussNewton(std::move(solver));
+    g2o::OptimizationAlgorithmGaussNewton* algorithm =
+        new g2o::OptimizationAlgorithmGaussNewton(std::move(solver));
 
     optimizer_->setAlgorithm(algorithm);
 }
@@ -24,7 +26,8 @@ g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose) {
     g2o::VertexSE2* node = new g2o::VertexSE2();
     node->setId(optimizer_->vertices().size());
     node->setEstimate(pose);
-    if (optimizer_->vertices().size() == 0) /* set the first frame as the fixed one */
+    if (optimizer_->vertices().size() ==
+        0) /* set the first frame as the fixed one */
         node->setFixed(false);
     else
         node->setFixed(false);
@@ -45,8 +48,10 @@ g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose, bool fixed) {
     return node;
 }
 
-g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from, const g2o::VertexSE2* to,
-                                    const MatrixSE2& relative_pose, const Eigen::Matrix3d& info_matrix) {
+g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from,
+                                    const g2o::VertexSE2* to,
+                                    const MatrixSE2& relative_pose,
+                                    const Eigen::Matrix3d& info_matrix) {
     // create a new edge
     g2o::EdgeSE2* edge = new g2o::EdgeSE2();
     edge->vertices()[0] = optimizer_->vertex(from->id());
@@ -58,10 +63,16 @@ g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from, const g2o::Verte
     return edge;
 }
 
-g2o::EdgeSE2* PoseGraph::addSE2Edge(const int prev_id, const int cur_id, const MatrixSE2& relative_pose, const Eigen::Matrix3d& info_matrix) {
+g2o::EdgeSE2* PoseGraph::addSE2Edge(const int prev_id,
+                                    const int cur_id,
+                                    const MatrixSE2& relative_pose,
+                                    const Eigen::Matrix3d& info_matrix) {
     // create a new edge
     if (prev_id < 0 || cur_id < 0) {
-        RCLCPP_WARN(rclcpp::get_logger("PoseGraph"), "The idx of frames is less than 0, prev_id: %d, cur_id: %d", prev_id, cur_id);
+        RCLCPP_WARN(rclcpp::get_logger("PoseGraph"),
+                    "The idx of frames is less than 0, prev_id: %d, cur_id: %d",
+                    prev_id,
+                    cur_id);
         return nullptr;
     }
     g2o::EdgeSE2* edge = new g2o::EdgeSE2();
@@ -81,6 +92,8 @@ void PoseGraph::optimize(unsigned int num_iterations) {
 }
 
 void PoseGraph::saveGraph(const std::string& file_name) {
-    RCLCPP_INFO(rclcpp::get_logger("PoseGraph"), "Saving graph to %s", file_name.c_str());
+    RCLCPP_INFO(rclcpp::get_logger("PoseGraph"),
+                "Saving graph to %s",
+                file_name.c_str());
     optimizer_->save(file_name.c_str());
 }

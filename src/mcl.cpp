@@ -1,6 +1,6 @@
-#include <random>
+#include "slam_demo/mcl.h"
 #include <cmath>
-#include "mcl.h"
+#include <random>
 
 using namespace std;
 
@@ -46,7 +46,7 @@ void mcl::predict(double var[], double motion[]) {
     default_random_engine gen;
 
     for (int i = 0; i < n_particles; ++i) {
-        Particle *p = &particles[i];
+        Particle* p = &particles[i];
 
         // Predict
         double new_x = p->x + motion[0];
@@ -68,9 +68,9 @@ void mcl::predict(double var[], double motion[]) {
 void mcl::updateWeights() {
     double sum = 0;
     for (int i = 0; i < n_particles; ++i) {
-        sum+=exp(particles[i].score);
+        sum += exp(particles[i].score);
     }
-    //Renew the weights
+    // Renew the weights
     for (int i = 0; i < n_particles; ++i) {
         particles[i].weight = exp(particles[i].score) / sum;
     }

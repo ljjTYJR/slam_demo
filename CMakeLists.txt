@@ -58,7 +58,6 @@ endif()
 
 include_directories(
   include/
-  src/
   ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
@@ -93,6 +92,7 @@ ament_target_dependencies(
   tf2
   tf2_geometry_msgs
   visualization_msgs
+  pcl_conversions
 )
 target_link_libraries(
   slam_node
@@ -112,44 +112,38 @@ ament_target_dependencies(
   tf2_ros
 )
 
-add_executable(opt_topic_pub_node code_snippet/opt_topic_pub.cpp)
-ament_target_dependencies(
-  opt_topic_pub_node
-  rclcpp
-  std_msgs
-  tf2_ros
+install(
+  DIRECTORY include/
+  DESTINATION include
 )
 
-install(
-  TARGETS
+set(targets_list
   slam_node
   sensor_offset_node
-  opt_topic_pub_node
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
-  DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}
+  TARGETS ${targets_list}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
 
-install(
-  DIRECTORY
-  config
-  DESTINATION share/${PROJECT_NAME}
-)
-
-install(
-  DIRECTORY
-  rviz
-  DESTINATION share/${PROJECT_NAME}
-)
-
-install(
-  DIRECTORY
-  bag
-  DESTINATION share/${PROJECT_NAME}
-)
+ament_export_dependencies(
+  rclcpp
+  std_msgs
+  laser_geometry
+  nav_msgs
+  sensor_msgs
+  geometry_msgs
+  message_filters
+  pcl_msgs
+  tf2_ros
+  tf2_eigen
+  tf2
+  tf2_geometry_msgs
+  visualization_msgs
+  pcl_conversions)
 
 ament_package()
