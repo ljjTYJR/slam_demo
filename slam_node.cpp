@@ -1,5 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
-#include "slam.h"
+#include "slam_demo/slam.h"
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
