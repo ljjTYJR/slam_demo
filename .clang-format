@@ -1,0 +1,6 @@
+---
+BasedOnStyle: Chromium
+IndentWidth: '4'
+PointerAlignment: Left
+BinPackArguments: false
+BinPackParameters: false
