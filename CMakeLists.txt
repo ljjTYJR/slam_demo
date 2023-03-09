@@ -22,6 +22,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED)
 
 # 3-rd party packages
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
@@ -43,9 +44,11 @@ list(APPEND G2O_LIBS
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
+
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
@@ -66,12 +69,12 @@ include_directories(
 
 # add the source files
 set(SOURCES
-    src/odometer.cpp
-    src/slam.cpp
-    src/pose_graph.cpp
-    src/scan_context.cpp
-    src/visualization.cpp
-    src/helper.cpp
+  src/odometer.cpp
+  src/slam.cpp
+  src/pose_graph.cpp
+  src/scan_context.cpp
+  src/visualization.cpp
+  src/helper.cpp
 )
 
 add_executable(slam_node slam_node.cpp ${SOURCES})
