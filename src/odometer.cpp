@@ -1,83 +1,108 @@
 #include "odomter.h"
 #include "pointmatcher/PointMatcher.h"
 
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
-#include <tf/tf.h>
-#include <tf_conversions/tf_eigen.h>
-#include <tf/transform_listener.h>
-#include "tf/transform_broadcaster.h"
-#include <eigen_conversions/eigen_msg.h>
+#include <iostream>
 
 typedef PointMatcher<float> PM;
 typedef PM::DataPoints DP;
 
 
-Odometer::Odometer(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
-    : nh_(nh),
-    nhp_(pnh),
+Odometer::Odometer(const rclcpp::Node::SharedPtr node) :
+    node_(node),
     sensor_offset_(Eigen::Affine3d::Identity()),
     latest_odom_(MatrixSE2::Identity()),
     set_the_first_pose_(false),
     latest_scan_(new pcl::PointCloud<pcl::PointXY>()),
     prev_scan_(new pcl::PointCloud<pcl::PointXY>()) {
-    ROS_INFO("The odometer is preparing to initialize.");
+    RCLCPP_INFO(node_->get_logger(), "The odometer is preparing to initialize.");
     init();
 }
 
 void Odometer::init() {
+  declareParameters();
   loadParameters();
   advertisePublishers();
   return;
 }
 
-void Odometer::loadParameters() {
+void Odometer::declareParameters() {
   // frames
-  nhp_.param("laser_frame_", laser_frame_, std::string("laser_frame"));
-  nhp_.param("odom_frame_", odom_frame_, std::string("odom_frame"));
-  nhp_.param("base_frame_", base_frame_, std::string("base_frame"));
+  node_->declare_parameter<std::string>("sensor_link", "sensor_link");
+  node_->declare_parameter<std::string>("robot_link", "robot_link");
+  node_->declare_parameter<std::string>("map_link", "map_link");
   // topics
-  nhp_.param("pub_pose_topic_", pub_pose_topic_, std::string("pose"));
-  nhp_.param("pub_laser_topic_", pub_laser_topic_, std::string("laser"));
-  nhp_.param("pub_path_topic_", pub_path_topic_, std::string("path"));
+  node_->declare_parameter<std::string>("pub_pose_topic_", "pose");
+  node_->declare_parameter<std::string>("pub_laser_topic_", "laser");
+  node_->declare_parameter<std::string>("pub_path_topic_", "path");
   // flags
-  nhp_.param("use_wheel_odom_", use_wheel_odom_, true);
-  nhp_.param("use_laser_", use_laser_, true);
-  nhp_.param("use_darko_cfg_", use_darko_cfg_, true);
-  nhp_.param("use_wheel_odom_prior_guess_", use_wheel_odom_prior_guess_, true);
+  node_->declare_parameter<bool>("use_wheel_odom_", true);
+  node_->declare_parameter<bool>("use_laser_", true);
+  node_->declare_parameter<bool>("use_darko_cfg_", true);
+  node_->declare_parameter<bool>("use_wheel_odom_prior_guess_", true);
+  // hyperparameters
+  node_->declare_parameter<double>("farthest_point_dist", 10.0);
+  return;
+}
 
-
-  tf::TransformListener listener;
-  Eigen::Affine3d transform_static;
-  tf::StampedTransform transform_stamp;
+Eigen::Isometry3d Odometer::getSensorOffset() {
+  tf2_ros::Buffer tf_buffer(node_->get_clock());
+  tf2_ros::TransformListener tf_listener(tf_buffer);
+  Eigen::Isometry3d transform_static;
+  geometry_msgs::msg::TransformStamped t;
   bool listening = true;
   float wait_seconds = 1.0;
   while (listening) {
     try {
-        ROS_INFO("trying to get the transform from %s to %s", base_frame_.c_str(), laser_frame_.c_str());
-        listener.lookupTransform(base_frame_, laser_frame_, ros::Time(0), transform_stamp);
-    } catch (tf::TransformException ex) {
-        ROS_INFO("waiting to get the transform from %s to %s", base_frame_.c_str(), laser_frame_.c_str());
+        RCLCPP_INFO(node_->get_logger(), "trying to get the transform from %s to %s", robot_link.c_str(), sensor_link.c_str());
+        t = tf_buffer.lookupTransform(robot_link, sensor_link, rclcpp::Time(0));
+        RCLCPP_INFO(node_->get_logger(), "t: %f, %f, %f, %f, %f, %f, %f", t.transform.translation.x, t.transform.translation.y, t.transform.translation.z, t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w);
+    } catch (tf2::TransformException& ex) {
+        RCLCPP_INFO(node_->get_logger(), "waiting to get the transform from %s to %s", robot_link.c_str(), sensor_link.c_str());
         usleep(1000000 * wait_seconds); // wait for 1 second
         continue;
     }
     listening = false;
   }
-  tf::transformTFToEigen(transform_stamp, sensor_offset_);
-  std::cout << "sensor_offset_ = " << sensor_offset_.matrix() << std::endl;
+  transform_static = tf2::transformToEigen(t);
+  std::cout << transform_static.matrix() << std::endl;
+  return transform_static;
+}
+
+void Odometer::loadParameters() {
+  // frames
+  node_->get_parameter("sensor_link", sensor_link);
+  node_->get_parameter("robot_link", robot_link);
+  node_->get_parameter("map_link", map_link);
+  // topics
+  node_->get_parameter("pub_pose_topic_", pub_pose_topic_);
+  node_->get_parameter("pub_laser_topic_", pub_laser_topic_);
+  node_->get_parameter("pub_path_topic_", pub_path_topic_);
+  // flags
+  node_->get_parameter("use_wheel_odom_", use_wheel_odom_);
+  node_->get_parameter("use_laser_", use_laser_);
+  node_->get_parameter("use_darko_cfg_", use_darko_cfg_);
+  node_->get_parameter("use_wheel_odom_prior_guess_", use_wheel_odom_prior_guess_);
+  // hyperparameters
+  node_->get_parameter("farthest_point_dist", farthest_point_dist);
+
+  sensor_offset_ = getSensorOffset().cast<double>().matrix();
   return;
 }
 
 void Odometer::advertisePublishers() {
-  odom_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(pub_pose_topic_, 100);
-  laser_pub_ = nh_.advertise<sensor_msgs::LaserScan>(pub_laser_topic_, 100);
-  path_pub_ = nh_.advertise<nav_msgs::Path>(pub_path_topic_, 100);
-  ROS_INFO("Advertised to %s, %s, %s", pub_pose_topic_.c_str(), pub_laser_topic_.c_str(), pub_path_topic_.c_str());
+  odom_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>(pub_pose_topic_, 100);
+  path_pub_ = node_->create_publisher<nav_msgs::msg::Path>(pub_path_topic_, 10);
+  cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>(pub_laser_topic_, 10);
+  tf_broadcaster_map_to_robot_ = std::make_unique<tf2_ros::TransformBroadcaster>(*node_);
+  RCLCPP_INFO(node_->get_logger(), "Advertised to %s, %s, %s", pub_pose_topic_.c_str(), pub_laser_topic_.c_str(), pub_path_topic_.c_str());
   return;
 }
 
 std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr>
-Odometer::odomDealWithInputMessage(const sensor_msgs::LaserScan::ConstPtr& laser_msg, const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
+Odometer::odomDealWithInputMessage(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg, const nav_msgs::msg::Odometry::ConstPtr& wheel_odom_msg) {
   bool update = false;
   unsigned int key_frame_cnt = 0;
 
@@ -86,42 +111,31 @@ Odometer::odomDealWithInputMessage(const sensor_msgs::LaserScan::ConstPtr& laser
 
   update = updateOdom();
   if (update) {
-    publishPose();
-    publishLaser(laser_msg);
+    publishPosePathAndPointCloud();
     key_frame_cnt = key_frames_buffer_.size();
   }
   // Here, minus 1 because the index should start from 0
   return std::make_tuple(update, key_frame_cnt - 1, latest_scan_);
 }
 
-void Odometer::point3d2Point2d(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input_cloud, pcl::PointCloud<pcl::PointXY>::Ptr& output_cloud) {
-  output_cloud->points.resize(input_cloud->points.size());
-    for (unsigned int i = 0; i < input_cloud->points.size(); ++i) {
-        output_cloud->points[i].x = input_cloud->points[i].x;
-        output_cloud->points[i].y = input_cloud->points[i].y;
-    }
-  return;
-}
-
-void Odometer::readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg) {
+void Odometer::readInLaserScan(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg) {
   if (latest_scan_->points.size() != 0) {
     *prev_scan_ = *latest_scan_;
   }
 
   timer_ = laser_msg->header.stamp;
   static laser_geometry::LaserProjection laser_projector;
-  sensor_msgs::PointCloud2 pc_2;
+  sensor_msgs::msg::PointCloud2 pc_2;
   laser_projector.projectLaser(*laser_msg, pc_2);
+  // clear the latest_scan_
+  latest_scan_->points.clear();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
   pcl::fromROSMsg(pc_2, *input_cloud);
   if (use_darko_cfg_) {
       /* transform the read in point cloud to the coordinate of the robot, represented in the robot */
       pcl::transformPointCloud(*input_cloud, *input_cloud, sensor_offset_);
-      point3d2Point2d(input_cloud, latest_scan_);
-  } else {
-      // To do: test for 2d
-      ROS_ERROR("Not implemented yet");
+      point3d2point2d(input_cloud, latest_scan_, farthest_point_dist);
   }
   latest_scan_->width = latest_scan_->points.size();
   latest_scan_->height = 1;
@@ -130,9 +144,10 @@ void Odometer::readInLaserScan(const sensor_msgs::LaserScan::ConstPtr& laser_msg
   return;
 }
 
-void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_msg) {
-  Eigen::Affine3d T;
-  tf::poseMsgToEigen(wheel_odom_msg->pose.pose, T);
+void Odometer::readInWheelOdom(const nav_msgs::msg::Odometry::ConstPtr wheel_odom_msg) {
+  Eigen::Isometry3d T;
+  /* TODO: New function, to test? */
+  tf2::fromMsg(wheel_odom_msg->pose.pose, T);
   Eigen::Matrix3d r3 = T.rotation();
   Eigen::Vector3d t = T.translation();
   MatrixSE2 new_pose = MatrixSE2::Identity();
@@ -146,7 +161,7 @@ void Odometer::readInWheelOdom(const nav_msgs::Odometry::ConstPtr& wheel_odom_ms
       new_pose(i,2) = t(i);
   }
   if (wheel_odom_mem_.size() == 0) {
-    ROS_INFO("Read in the first wheel odom");
+    RCLCPP_INFO(node_->get_logger(), "Read in the first wheel odom");
     prev_wheel_odom_ = new_pose;
   } else {
     prev_wheel_odom_ = wheel_odom_mem_.back();
@@ -174,7 +189,7 @@ bool Odometer::transLargeEnough(const MatrixSE2& pose) {
 
 bool Odometer::updateOdom() {
   if (!key_frames_buffer_.size()) {
-    ROS_INFO("Add the first key frame");
+    RCLCPP_INFO(node_->get_logger(), "Add the first key frame");
     // new a new point cloud
     pcl::PointCloud<pcl::PointXY>::Ptr key_cloud(new pcl::PointCloud<pcl::PointXY>());
     *key_cloud = *latest_scan_;
@@ -218,7 +233,7 @@ MatrixSE2 Odometer::icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev
                                   const pcl::PointCloud<pcl::PointXY>::Ptr& cur_scan, const MatrixSE2& guess) {
 
   if (prev_scan->points.size() == 0 || cur_scan->points.size() == 0) {
-    ROS_ERROR("No point cloud received");
+    RCLCPP_ERROR(node_->get_logger(), "Empty scan");
     exit(1);
   }
 
@@ -285,11 +300,10 @@ MatrixSE2 Odometer::icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev
   return T_final_eigen;
 }
 
-void Odometer::publishPose() {
-  static nav_msgs::Path path;
-  geometry_msgs::PoseStamped pose;
+void Odometer::publishPosePathAndPointCloud() {
+  geometry_msgs::msg::PoseStamped pose;
   pose.header.stamp = timer_;
-  pose.header.frame_id = odom_frame_;
+  pose.header.frame_id = map_link;
   MatrixSE2 cur_pose = odom_mem_.back();
   double theta = atan2(cur_pose(1, 0), cur_pose(0, 0));
   pose.pose.orientation.w = cos(theta / 2);
@@ -299,18 +313,29 @@ void Odometer::publishPose() {
   pose.pose.position.x = cur_pose(0, 2);
   pose.pose.position.y = cur_pose(1, 2);
   pose.pose.position.z = 0;
-  odom_pub_.publish(pose);
+  odom_pub_->publish(pose);
 
-  path.header.frame_id = odom_frame_;
+  static nav_msgs::msg::Path path;
+  path.header.frame_id = map_link;
   path.poses.push_back(pose);
-  path_pub_.publish(path);
+  path_pub_->publish(path);
+
+  // publish the point cloud
+  sensor_msgs::msg::PointCloud2 cloud_msg;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_3d(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::copyPointCloud(*latest_scan_, *cloud_3d);
+  Eigen::Affine3d pose_mat = pose_stamped_to_eigen(pose);
+  pcl::transformPointCloud(*cloud_3d, *cloud_3d, pose_mat);
+  pcl::toROSMsg(*cloud_3d, cloud_msg);
+  cloud_msg.header.frame_id = map_link;
+  cloud_msg.header.stamp = timer_;
+  cloud_pub_->publish(cloud_msg);
 
   //send transfrom
-  static tf2_ros::TransformBroadcaster br;
-  geometry_msgs::TransformStamped tr;
+  geometry_msgs::msg::TransformStamped tr;
   tr.header.stamp = timer_;
-  tr.header.frame_id = odom_frame_;
-  tr.child_frame_id = base_frame_;
+  tr.header.frame_id = map_link;
+  tr.child_frame_id = robot_link;
   tr.transform.translation.x = cur_pose(0, 2);
   tr.transform.translation.y = cur_pose(1, 2);
   tr.transform.translation.z = 0;
@@ -318,31 +343,8 @@ void Odometer::publishPose() {
   tr.transform.rotation.y = pose.pose.orientation.y;
   tr.transform.rotation.z = pose.pose.orientation.z;
   tr.transform.rotation.w = pose.pose.orientation.w;
-  br.sendTransform(tr);
+  tf_broadcaster_map_to_robot_->sendTransform(tr);
 }
-
-// Todo: use the readin laser scan
-void Odometer::publishLaser(const sensor_msgs::LaserScanConstPtr &msg) {
-  static sensor_msgs::LaserScan laserscan;
-  laserscan.header.stamp = timer_;
-  laserscan.header.frame_id = laser_frame_;
-  laserscan.angle_min = msg->angle_min;
-  laserscan.angle_max = msg->angle_max;
-  laserscan.angle_increment = msg->angle_increment;
-  laserscan.time_increment = msg->time_increment;
-  laserscan.scan_time = msg->scan_time;
-  laserscan.range_min = msg->range_min;
-  laserscan.range_max = msg->range_max;
-  laserscan.ranges.resize(msg->ranges.size());
-  laserscan.intensities.resize(msg->ranges.size());
-  for (unsigned int i = 0; i < msg->ranges.size(); i++)
-  {
-      laserscan.ranges[i] = msg->ranges[i];
-      laserscan.intensities[i] = msg->intensities[i];
-  }
-  laser_pub_.publish(laserscan);
-}
-
 
 Odometer::~Odometer()
 {

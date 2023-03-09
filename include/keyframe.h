@@ -1,23 +1,20 @@
-#ifndef __KEY_FRAME_H
-#define __KEY_FRAME_H
-
+#pragma once
+// customized
 #include "types.h"
-
-#include <ros/ros.h>
-
+// ROS2
+#include "rclcpp/rclcpp.hpp"
+// third party
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
-
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-
 #include <g2o/types/slam2d/edge_se2.h>
 #include <g2o/types/slam2d/vertex_se2.h>
 
 
 class KeyFrame {
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     using Ptr = std::shared_ptr<KeyFrame>;
 
     KeyFrame(const unsigned int& id, const MatrixSE2& pose, const MatrixSE2& relative_measure, const pcl::PointCloud<pcl::PointXY>::Ptr& cloud)
@@ -36,5 +33,3 @@ private:
     MatrixSE2 relative_measure_; //the relative measure from the previous key frame
     pcl::PointCloud<pcl::PointXY>::Ptr cloud_;
 };
-
-#endif

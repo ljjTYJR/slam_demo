@@ -1,22 +1,20 @@
-#ifndef __SCAN_CONTEXT_MANGER_H
-#define __SCAN_CONTEXT_MANGER_H
-#include <Eigen/Dense>
-#include <vector>
-#include <utility>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
+#pragma once
 
+// customized
 #include "nanoflann.hpp"
 #include "KDTreeVectorOfVectorsAdaptor.h"
 #include "types.h"
+// Standard C/C++
+#include <vector>
+#include <utility>
+// Third party
+#include <Eigen/Dense>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
-/**
- * The header file for scan context class
-*/
 using RingKeyVecOfVecs = std::vector<std::vector<float> >;
 using RingKeyKDTree = KDTreeVectorOfVectorsAdaptor< RingKeyVecOfVecs, float >;
 double deg2rad(double degrees);
-
 
 class ScanContextManger {
 
@@ -27,7 +25,7 @@ class ScanContextManger {
         // pcl::PointCloud<pcl::PointXY>::Ptr cloud;    //TODO: decide whether to store the cloud, in the odometer or here
     }POINT_CLOUD_DSC_;
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 public:
     ScanContextManger();
@@ -56,10 +54,10 @@ private:
     // TODO: the hyper-parameters need to be tuned
         const unsigned int kNumRings = 20;
         const unsigned int kNumSector = 60;
-        const unsigned int kSkipLaestFrames = 20;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
+        const unsigned int kSkipLaestFrames = 25;   // To detect the loop closure, we skip latest `kSkipLaestFrames` frames
         const unsigned int kNumRingKeyQuery = 10;        // The number of key frames(ring key) to query
-        const double kLoopDistThres = 0.5;                // The maximum distance between two possbile poses
-        const double kMaxRadius = 10.0;             // meter
+        const double kLoopDistThres = 0.3;                // The maximum distance between two possbile poses
+        const double kMaxRadius = 5.0;             // meter
         const double kSectorResolution = 360.0 / (double)(kNumSector);
         const double kRingResolution = kMaxRadius / (double)(kNumRings);
         const double kSC_DIST_THRES = 0.5;        // The threshold of the distance between two scan contexts (get from original implementation)
@@ -72,5 +70,3 @@ private:
         std::unique_ptr<RingKeyKDTree> ring_key_kd_tree_;
 };
 
-
-#endif // __SCAN_CONTEXT_MANGER_H

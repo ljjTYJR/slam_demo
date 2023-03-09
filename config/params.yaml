@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    robot_link: "robot"
+    sensor_link: "laser"
+    map_link: "odom"
+    opt_path_frame_: "odom"
+    opt_pose_frame_: "odom"
+    use_sim_time: true
+
+slam:
+  sensor_offset_node:
+    ros__parameters:
+      x: 0.421
+      y: -0.327
+      z: 0.044
+      qx: 0.92396
+      qy: -0.3825
+      qz: 0.0
+      qw: 0.0
+
+  slam_demo_node:
+    ros__parameters:
+      sub_wheel_odom_topic_: "/robot/throttle/odom"
+      sub_laser_topic_: "/robot/front_laser/scan"
+      use_wheel_odom_prior_guess_: true
+      save_g2o_file_: true
+      opt_graph_iter_: 15
+      odom_info_vec: [100.0, 100.0, 1000.0]
+      loop_info_vec: [100.0, 100.0, 1000.0]
+      # 0 means not pruning points
+      farthest_point_dist: 5.0
+
+
+  rviz2:
+    ros__parameters:
+      tf_buffer_cache_time_ms: 10000

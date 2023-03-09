@@ -1,11 +1,11 @@
 #include "visualization.h"
+#include <rclcpp/time_source.hpp>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/clock.hpp>
 
-#include <visualization_msgs/Marker.h>
-
-
-Visualization::Visualization(const ros::NodeHandle& nh) {
-    nh_ = nh;
-    pub_line_ = nh_.advertise<visualization_msgs::Marker>("visualization_line", 10);
+Visualization::Visualization(const rclcpp::Node::SharedPtr node) {
+    node_ = node;
+    pub_line_ = node_->create_publisher<visualization_msgs::msg::Marker>("loop_marker", 10);
 }
 
 /**
@@ -13,18 +13,19 @@ Visualization::Visualization(const ros::NodeHandle& nh) {
 */
 void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE2& pose2, const std::string& frame_id, const double& duration) {
 
-    static visualization_msgs::Marker points, line;
+    static visualization_msgs::msg::Marker points, line;
     points.header.frame_id = line.header.frame_id = frame_id;
-    points.header.stamp = line.header.stamp = ros::Time::now();
+    points.header.stamp = line.header.stamp = rclcpp::Clock().now();
+    // TODO: to decide the namespace
     points.ns = line.ns = "visualization";
-    points.action = line.action = visualization_msgs::Marker::ADD;
+    points.action = line.action = visualization_msgs::msg::Marker::ADD;
     points.pose.orientation.w = line.pose.orientation.w = 1.0;
 
     points.id = 0;
     line.id = 1;
 
-    points.type = visualization_msgs::Marker::POINTS;
-    line.type = visualization_msgs::Marker::LINE_LIST;
+    points.type = visualization_msgs::msg::Marker::POINTS;
+    line.type = visualization_msgs::msg::Marker::LINE_LIST;
 
     // POINTS markers use x and y scale for width/height respectively
     points.scale.x = 0.1;
@@ -41,7 +42,7 @@ void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE
     line.color.r = 0.5f;
     line.color.a = 0.5f;
 
-    geometry_msgs::Point p1, p2;
+    geometry_msgs::msg::Point p1, p2;
     p1.x = pose1(0, 2);
     p1.y = pose1(1, 2);
     p1.z = 0;
@@ -53,11 +54,10 @@ void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE
     points.points.push_back(p2);
     line.points.push_back(p1);
     line.points.push_back(p2);
+    points.lifetime = line.lifetime = rclcpp::Duration::from_seconds(duration);
 
-    points.lifetime = line.lifetime = ros::Duration(duration);
-
-    pub_line_.publish(points);
-    pub_line_.publish(line);
+    pub_line_->publish(points);
+    pub_line_->publish(line);
 
     return;
 }

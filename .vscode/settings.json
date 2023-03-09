@@ -61,6 +61,20 @@
         "set": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "core": "cpp"
-    }
+        "core": "cpp",
+        "unordered_set": "cpp",
+        "__node_handle": "cpp",
+        "filesystem": "cpp",
+        "bit": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "stop_token": "cpp",
+        "__nullptr": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
+    },
+    "terminal.integrated.fontFamily": "Monoid NF"
 }

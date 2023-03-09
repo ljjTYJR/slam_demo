@@ -3,7 +3,7 @@
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include <g2o/solvers/dense/linear_solver_dense.h>
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 
 PoseGraph::PoseGraph() {
     // define the used optimizer
@@ -25,7 +25,7 @@ g2o::VertexSE2* PoseGraph::addSE2Node(const MatrixSE2& pose) {
     node->setId(optimizer_->vertices().size());
     node->setEstimate(pose);
     if (optimizer_->vertices().size() == 0) /* set the first frame as the fixed one */
-        node->setFixed(true);
+        node->setFixed(false);
     else
         node->setFixed(false);
     optimizer_->addVertex(node);
@@ -61,7 +61,7 @@ g2o::EdgeSE2* PoseGraph::addSE2Edge(const g2o::VertexSE2* from, const g2o::Verte
 g2o::EdgeSE2* PoseGraph::addSE2Edge(const int prev_id, const int cur_id, const MatrixSE2& relative_pose, const Eigen::Matrix3d& info_matrix) {
     // create a new edge
     if (prev_id < 0 || cur_id < 0) {
-        ROS_WARN("The idx of frames is less than 0, prev_id: %d, cur_id: %d", prev_id, cur_id);
+        RCLCPP_WARN(rclcpp::get_logger("PoseGraph"), "The idx of frames is less than 0, prev_id: %d, cur_id: %d", prev_id, cur_id);
         return nullptr;
     }
     g2o::EdgeSE2* edge = new g2o::EdgeSE2();
@@ -81,6 +81,6 @@ void PoseGraph::optimize(unsigned int num_iterations) {
 }
 
 void PoseGraph::saveGraph(const std::string& file_name) {
-    ROS_INFO("Saving graph to %s", file_name.c_str());
+    RCLCPP_INFO(rclcpp::get_logger("PoseGraph"), "Saving graph to %s", file_name.c_str());
     optimizer_->save(file_name.c_str());
 }

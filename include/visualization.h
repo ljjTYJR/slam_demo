@@ -1,21 +1,22 @@
-#ifndef __VISUALIZATION_H
-#define __VISUALIZATION_H
-
+#pragma once
+// cunstomed
 #include "types.h"
-#include <ros/ros.h>
+// ROS2
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+// standard C/C++
 #include <string>
 
 class Visualization {
 public:
-    Visualization(const ros::NodeHandle& nh);
+    Visualization(const rclcpp::Node::SharedPtr node);
     ~Visualization() {};
 
     void publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE2& pose2, const std::string& frame_id, const double& duration);
-private:
-    ros::NodeHandle nh_;
-    ros::Publisher  pub_line_;
 
+private:
+    rclcpp::Node::SharedPtr node_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_line_;
     std::string pub_line_topic_;
 };
-
-#endif // __VISUALIZATION_H

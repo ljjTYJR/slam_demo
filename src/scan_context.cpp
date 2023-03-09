@@ -1,5 +1,9 @@
 #include "scan_context.h"
-#include <ros/ros.h>
+
+// ROS2
+#include "rclcpp/rclcpp.hpp"
+
+// standard C/C++
 #include <math.h>
 #include <limits>
 #include <chrono>
@@ -20,7 +24,7 @@ double deg2rad(double degrees) {
 }
 
 ScanContextManger::ScanContextManger() {
-    ROS_INFO("Scan context manager initialized.");
+    RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "ScanContextManger is initialized");
     return;
 }
 ScanContextManger::~ScanContextManger() { }
@@ -136,12 +140,12 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
     auto q_scan_context = cur_dsc.scan_context;
 
     if (point_cloud_dsc_buffer_.size() < kSkipLaestFrames) {
-        ROS_INFO("The buffer is not large enough to detect loop closure, the buffer size is %d", point_cloud_dsc_buffer_.size());
+        RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "The buffer is not large enough to detect loop closure, the buffer size is %d", point_cloud_dsc_buffer_.size());
         return std::make_pair(loop_id, loop_angle);
     }
     // every `kSkipLaestFrames` frames, reconstruct the ring key tree
     if (point_cloud_dsc_buffer_.size() % kSkipLaestFrames == 0) {
-        ROS_INFO("Reconstruct the ring key tree.");
+        // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Reconstruct the ring key tree.");
         tmp_ring_key_search_base_.clear();
         tmp_ring_key_search_base_.assign(ring_key_buffer_.begin(), ring_key_buffer_.end() - kSkipLaestFrames + 1);  //avoid to search the latest frames, in addition, plus 1
 
@@ -176,14 +180,12 @@ std::pair<int, double> ScanContextManger::detectLoopClosure(const POINT_CLOUD_DS
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // in ms
-    ROS_INFO("The time of searching the scan context is %d ms", duration_ms.count());
+    // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "The time of searching the scan context is %d ms", duration_ms.count());
 
     if (min_dist < kSC_DIST_THRES) {
         loop_id = point_cloud_dsc_buffer_[nn_idx].id;
         loop_angle = deg2rad(nn_shift * kSectorResolution); // 0-2pi
-        ROS_INFO("Loop closure detected, the loop id is %d, the shift is %d", loop_id, nn_shift);
-    } else {
-        ROS_DEBUG("No loop closure detected, the min dist is %f", min_dist);
+        // RCLCPP_INFO(rclcpp::get_logger("ScanContextManger"), "Loop closure detected, the loop id is %d, the shift is %d", loop_id, nn_shift);
     }
     return std::make_pair(loop_id, loop_angle);
 }
