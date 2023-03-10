@@ -1,0 +1,6 @@
+image: osrf/ros:rolling-desktop-full
+
+build:
+  stage: build
+  script:
+    - ros2
