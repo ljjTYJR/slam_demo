@@ -12,19 +12,18 @@ struct Particle {
     double score;
 };
 
-class mcl
-{
-private:
+class mcl {
+   private:
     int n_particles;
     bool initialized;
     std::vector<double> weights;
 
-public:
+   public:
     std::vector<Particle> particles;
-    mcl() : n_particles(0), initialized(false) {};
-    ~mcl() {};
+    mcl() : n_particles(0), initialized(false){};
+    ~mcl(){};
 
-    void init(int n, double x,double y, double theta, double var[]);
+    void init(int n, double x, double y, double theta, double var[]);
 
     void predict(double var[3], double motion[3]);
 
@@ -32,13 +31,9 @@ public:
 
     void resample();
 
-    bool isInitialized() {
-        return initialized;
-    }
+    bool isInitialized() { return initialized; }
 
-    int getNumParticles() {
-        return n_particles;
-    }
+    int getNumParticles() { return n_particles; }
 };
 
 #endif

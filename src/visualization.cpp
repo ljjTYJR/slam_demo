@@ -1,18 +1,21 @@
 #include "slam_demo/visualization.h"
-#include <rclcpp/time_source.hpp>
-#include <rclcpp/duration.hpp>
 #include <rclcpp/clock.hpp>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/time_source.hpp>
 
 Visualization::Visualization(const rclcpp::Node::SharedPtr node) {
     node_ = node;
-    pub_line_ = node_->create_publisher<visualization_msgs::msg::Marker>("loop_marker", 10);
+    pub_line_ = node_->create_publisher<visualization_msgs::msg::Marker>(
+        "loop_marker", 10);
 }
 
 /**
  * receive two poses and draw two points and a line between them
-*/
-void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE2& pose2, const std::string& frame_id, const double& duration) {
-
+ */
+void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1,
+                                          const MatrixSE2& pose2,
+                                          const std::string& frame_id,
+                                          const double& duration) {
     static visualization_msgs::msg::Marker points, line;
     points.header.frame_id = line.header.frame_id = frame_id;
     points.header.stamp = line.header.stamp = rclcpp::Clock().now();
@@ -31,7 +34,8 @@ void Visualization::publishLineOfTwoPoses(const MatrixSE2& pose1, const MatrixSE
     points.scale.x = 0.1;
     points.scale.y = 0.1;
 
-    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
+    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the
+    // line width
     line.scale.x = 0.025;
 
     // Points are green
