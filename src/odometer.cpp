@@ -1,5 +1,5 @@
+#include "slam_demo/odometer.h"
 #include "pointmatcher/PointMatcher.h"
-#include "slam_demo/odomter.h"
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include "rclcpp/rclcpp.hpp"
