@@ -12,7 +12,7 @@ struct Particle {
     double score;
 };
 
-class mcl {
+class Mcl {
    private:
     int n_particles;
     bool initialized;
@@ -20,8 +20,8 @@ class mcl {
 
    public:
     std::vector<Particle> particles;
-    mcl() : n_particles(0), initialized(false){};
-    ~mcl(){};
+    Mcl() : n_particles(0), initialized(false){};
+    ~Mcl(){};
 
     void init(int n, double x, double y, double theta, double var[]);
 

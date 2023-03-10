@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void mcl::init(int n, double x, double y, double theta, double var[]) {
+void Mcl::init(int n, double x, double y, double theta, double var[]) {
     n_particles = n;
 
     weights.resize(n_particles);
@@ -38,7 +38,7 @@ void mcl::init(int n, double x, double y, double theta, double var[]) {
     initialized = true;
 }
 
-void mcl::predict(double var[], double motion[]) {
+void Mcl::predict(double var[], double motion[]) {
     double var_x = var[0];
     double var_y = var[1];
     double var_theta = var[2];
@@ -65,7 +65,7 @@ void mcl::predict(double var[], double motion[]) {
     }
 }
 
-void mcl::updateWeights() {
+void Mcl::updateWeights() {
     double sum = 0;
     for (int i = 0; i < n_particles; ++i) {
         sum += exp(particles[i].score);
