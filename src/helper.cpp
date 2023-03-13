@@ -28,8 +28,7 @@ void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr& cloud_in,
         cloud_out->points.resize(cloud_in->points.size());
         unsigned int j = 0;
         for (unsigned int i = 0; i < cloud_in->points.size(); ++i) {
-            if (cloud_in->points[i].x * cloud_in->points[i].x +
-                    cloud_in->points[i].y * cloud_in->points[i].y <
+            if (cloud_in->points[i].x * cloud_in->points[i].x + cloud_in->points[i].y * cloud_in->points[i].y <
                 prune_dist * prune_dist) {
                 cloud_out->points[j].x = cloud_in->points[i].x;
                 cloud_out->points[j].y = cloud_in->points[i].y;
@@ -43,8 +42,7 @@ void point3d2point2d(const pcl::PointCloud<PointType3>::Ptr& cloud_in,
     return;
 }
 
-Eigen::Affine3d pose_stamped_to_eigen(
-    const geometry_msgs::msg::PoseStamped& pose_msg) {
+Eigen::Affine3d pose_stamped_to_eigen(const geometry_msgs::msg::PoseStamped& pose_msg) {
     Eigen::Affine3d eigen_pose = Eigen::Affine3d::Identity();
 
     // Extract position and orientation information from the PoseStamped message

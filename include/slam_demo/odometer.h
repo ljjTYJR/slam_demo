@@ -40,19 +40,14 @@ class Odometer {
 
     /* the odometer, to deal with the input message; the input can be wheel_odom
      * or laser_msg or both */
-    std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr>
-    odomDealWithInputMessage(
+    std::tuple<bool, unsigned int, pcl::PointCloud<pcl::PointXY>::Ptr> odomDealWithInputMessage(
         const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg,
         const nav_msgs::msg::Odometry::ConstPtr& wheel_odom_msg);
-    void odomDealWithInputMessage(
-        const nav_msgs::msg::Odometry::ConstPtr wheel_odom_msg);
-    void odomDealWithInputMessage(
-        const sensor_msgs::msg::LaserScan::ConstPtr laser_msg);
+    void odomDealWithInputMessage(const nav_msgs::msg::Odometry::ConstPtr wheel_odom_msg);
+    void odomDealWithInputMessage(const sensor_msgs::msg::LaserScan::ConstPtr laser_msg);
 
-    void readInLaserScan(
-        const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg);
-    void readInWheelOdom(
-        const nav_msgs::msg::Odometry::ConstPtr wheel_odom_msg);
+    void readInLaserScan(const sensor_msgs::msg::LaserScan::ConstPtr& laser_msg);
+    void readInWheelOdom(const nav_msgs::msg::Odometry::ConstPtr wheel_odom_msg);
     MatrixSE2 icpPointMatch(const pcl::PointCloud<pcl::PointXY>::Ptr& prev_scan,
                             const pcl::PointCloud<pcl::PointXY>::Ptr& cur_scan,
                             const MatrixSE2& guess);
@@ -108,9 +103,8 @@ class Odometer {
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_map_to_robot_;
 
     // The latest data record
-    MatrixSE2 latest_odom_;  // The latest pose of the robot in the map frame;
-    MatrixSE2
-        prev_wheel_odom_;  // The latest pose of the robot in the map frame;
+    MatrixSE2 latest_odom_;      // The latest pose of the robot in the map frame;
+    MatrixSE2 prev_wheel_odom_;  // The latest pose of the robot in the map frame;
     MatrixSE2 prev_wheel_key_odom_;
     pcl::PointCloud<pcl::PointXY>::Ptr latest_scan_;
     pcl::PointCloud<pcl::PointXY>::Ptr prev_scan_;

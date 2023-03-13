@@ -30,8 +30,7 @@ void declareParams(rclcpp::Node::SharedPtr node) {
     node->declare_parameter<double>("qw", 0.0);
 }
 
-void getParams(rclcpp::Node::SharedPtr node,
-               StaticTransform& static_transform) {
+void getParams(rclcpp::Node::SharedPtr node, StaticTransform& static_transform) {
     node->get_parameter("robot_link", static_transform.frame_id);
     node->get_parameter("sensor_link", static_transform.child_frame_id);
     node->get_parameter("x", static_transform.x);
@@ -55,11 +54,7 @@ int main(int argc, char* argv[]) {
                 "Publishing static transform from %s to %s",
                 static_transform.frame_id.c_str(),
                 static_transform.child_frame_id.c_str());
-    RCLCPP_INFO(node->get_logger(),
-                "x: %f, y: %f, z: %f",
-                static_transform.x,
-                static_transform.y,
-                static_transform.z);
+    RCLCPP_INFO(node->get_logger(), "x: %f, y: %f, z: %f", static_transform.x, static_transform.y, static_transform.z);
     RCLCPP_INFO(node->get_logger(),
                 "qx: %f, qy: %f, qz: %f, qw: %f",
                 static_transform.qx,
