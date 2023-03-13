@@ -5,8 +5,7 @@
 
 Visualization::Visualization(const rclcpp::Node::SharedPtr node) {
     node_ = node;
-    pub_line_ = node_->create_publisher<visualization_msgs::msg::Marker>(
-        "loop_marker", 10);
+    pub_line_ = node_->create_publisher<visualization_msgs::msg::Marker>("loop_marker", 10);
 }
 
 /**

@@ -20,10 +20,7 @@ class KeyFrame {
              const MatrixSE2& pose,
              const MatrixSE2& relative_measure,
              const pcl::PointCloud<pcl::PointXY>::Ptr& cloud)
-        : id_(id),
-          pose_(pose),
-          relative_measure_(relative_measure),
-          cloud_(cloud){};
+        : id_(id), pose_(pose), relative_measure_(relative_measure), cloud_(cloud){};
 
     ~KeyFrame(){};
 
@@ -35,7 +32,6 @@ class KeyFrame {
    private:
     unsigned int id_;
     MatrixSE2 pose_;
-    MatrixSE2
-        relative_measure_;  // the relative measure from the previous key frame
+    MatrixSE2 relative_measure_;  // the relative measure from the previous key frame
     pcl::PointCloud<pcl::PointXY>::Ptr cloud_;
 };

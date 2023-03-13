@@ -1,11 +1,11 @@
 // test for libpointmatcher
 
-#include <iostream>
-#include <Eigen/Dense>
 #include <ceres/ceres.h>
-#include <ceres/rotation.h>
 #include <ceres/dynamic_autodiff_cost_function.h>
+#include <ceres/rotation.h>
+#include <Eigen/Dense>
 #include <Eigen/Eigen>
+#include <iostream>
 
 #include "pointmatcher/PointMatcher.h"
 
@@ -54,7 +54,6 @@ int main() {
     T_init(1, 0) = sin(angle);
     T_init(1, 1) = cos(angle);
 
-
     PM::ICP icp;
     PointMatcherSupport::Parametrizable::Parameters params;
     std::string name;
@@ -86,7 +85,6 @@ int main() {
     cout << "T = " << endl << T << endl;
     PM::TransformationParameters T2 = icp(points_dp, points_transformed_dp, T_init);
     cout << "T2 = " << endl << T2 << endl;
-
 
     return 0;
 }

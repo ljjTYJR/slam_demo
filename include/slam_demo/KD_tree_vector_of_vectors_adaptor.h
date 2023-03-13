@@ -55,16 +55,9 @@ template <class VectorOfVectorsType,
           class Distance = nanoflann::metric_L2,
           typename IndexType = size_t>
 struct KDTreeVectorOfVectorsAdaptor {
-    typedef KDTreeVectorOfVectorsAdaptor<VectorOfVectorsType,
-                                         num_t,
-                                         DIM,
-                                         Distance>
-        self_t;
-    typedef
-        typename Distance::template traits<num_t, self_t>::distance_t metric_t;
-    typedef nanoflann::
-        KDTreeSingleIndexAdaptor<metric_t, self_t, DIM, IndexType>
-            index_t;
+    typedef KDTreeVectorOfVectorsAdaptor<VectorOfVectorsType, num_t, DIM, Distance> self_t;
+    typedef typename Distance::template traits<num_t, self_t>::distance_t metric_t;
+    typedef nanoflann::KDTreeSingleIndexAdaptor<metric_t, self_t, DIM, IndexType> index_t;
 
     index_t* index;  //! The kd-tree index for the user to call its methods as
                      //! usual with any other FLANN index.
@@ -82,9 +75,7 @@ struct KDTreeVectorOfVectorsAdaptor {
                 "Data set dimensionality does not match the 'DIM' template "
                 "argument");
         index = new index_t(
-            static_cast<int>(dims),
-            *this /* adaptor */,
-            nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size));
+            static_cast<int>(dims), *this /* adaptor */, nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size));
         index->buildIndex();
     }
 
@@ -118,9 +109,7 @@ struct KDTreeVectorOfVectorsAdaptor {
     inline size_t kdtree_get_point_count() const { return m_data.size(); }
 
     // Returns the dim'th component of the idx'th point in the class:
-    inline num_t kdtree_get_pt(const size_t idx, const size_t dim) const {
-        return m_data[idx][dim];
-    }
+    inline num_t kdtree_get_pt(const size_t idx, const size_t dim) const { return m_data[idx][dim]; }
 
     // Optional bounding-box computation: return false to default to a standard
     // bbox computation loop.
